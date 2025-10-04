@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<AnchorPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.data.anonymization.tool.controller.AuthScene"
+            prefHeight="350.0" prefWidth="500.0"
+            stylesheets="@../style/auth.css">
+
+
+    <VBox fx:id="main" styleClass="auth-center">
+        <VBox>
+            <HBox styleClass="auth-center">
+                <Label styleClass="auth-title" text="Авторизация"/>
+            </HBox>
+            <HBox styleClass="auth-center">
+                <VBox styleClass="auth-text-box">
+                    <Label styleClass="auth-text" text="Хост:"/>
+                    <Label styleClass="auth-text" text="Порт:"/>
+                    <Label styleClass="auth-text" text="База данных:"/>
+                    <Label styleClass="auth-text" text="Пользователь:"/>
+                    <Label styleClass="auth-text" text="Пароль:"/>
+                </VBox>
+                <VBox>
+                    <HBox styleClass="auth-field-box">
+                        <TextField fx:id="host" styleClass="auth-text-field" text="localhost"/>
+                    </HBox>
+                    <HBox styleClass="auth-field-box">
+                        <TextField fx:id="port" styleClass="auth-text-field" text="5432"/>
+                    </HBox>
+                    <HBox styleClass="auth-field-box">
+                        <TextField fx:id="database" styleClass="auth-text-field" text="mad"/>
+                    </HBox>
+                    <HBox styleClass="auth-field-box">
+                        <TextField fx:id="username" styleClass="auth-text-field" text="postgres"/>
+                    </HBox>
+                    <HBox styleClass="auth-field-box">
+                        <PasswordField fx:id="password" styleClass="auth-text-field" text="root"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+            <HBox styleClass="auth-center">
+                <Label fx:id="error"/>
+            </HBox>
+            <HBox styleClass="auth-center, auth-btn-box">
+                <Button onAction="#connection" text="Подключиться" styleClass="auth-btn"/>
+            </HBox>
+        </VBox>
+    </VBox>
+</AnchorPane>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.data.anonymization.tool.controller.method.MicroAggregationBySingleAxisView"
+            fitToHeight="true"
+            fitToWidth="true"
+            prefHeight="400.0" prefWidth="600.0">
+
+    <VBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Название:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="customName" minWidth="450"/>
+        </HBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Таблица:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="tableName" minWidth="450" disable="true"/>
+        </HBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="k:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="kValue" minWidth="450"/>
+        </HBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Выбрать главный атрибут:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <ComboBox fx:id="axisColumn" promptText="Выберите тип атрибут"/>
+        </HBox>
+        <HBox VBox.vgrow="ALWAYS" style="-fx-padding: 16px;" spacing="10">
+            <ListView fx:id="leftListView" VBox.vgrow="ALWAYS" onMouseClicked="#moveToRightClick"/>
+            <VBox alignment="CENTER">
+                <VBox style="-fx-padding: 0px 0px 5px 0px">
+                    <Button text="→" onAction="#moveToRight"/>
+                </VBox>
+                <VBox style="-fx-padding: 5px 0px 0px 0px">
+                    <Button text="←" onAction="#moveToLeft"/>
+                </VBox>
+            </VBox>
+            <ListView fx:id="rightListView" VBox.vgrow="ALWAYS" onMouseClicked="#moveToLeftClick"/>
+        </HBox>
+        <HBox fx:id="buttonContainer" style="-fx-alignment: center;-fx-padding: 10px 0px;" spacing="10"/>
+    </VBox>
+</ScrollPane>

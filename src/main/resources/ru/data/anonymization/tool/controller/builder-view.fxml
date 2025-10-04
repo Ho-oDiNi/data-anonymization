@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.ImageView?>
+<ScrollPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.data.anonymization.tool.controller.MaskingView"
+            prefHeight="240.0" prefWidth="290.0"
+            fitToHeight="true"
+            fitToWidth="true">
+
+
+    <VBox style="-fx-background-color: white;" alignment="CENTER" spacing="20">
+        <ImageView fx:id="load" fitHeight="50" fitWidth="50"/>
+        <Label fx:id="message" text="Идет обезличивание"/>
+    </VBox>
+</ScrollPane>

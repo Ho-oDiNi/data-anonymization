@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Polygon?>
+<?import java.lang.*?>
+<AnchorPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.data.anonymization.tool.controller.MainScene"
+            prefHeight="800.0" prefWidth="1200.0"
+            stylesheets="@../style/main.css">
+
+
+    <HBox fx:id="main">
+        <HBox fx:id="boxTabPane" minWidth="1" prefWidth="1">
+            <VBox HBox.hgrow="ALWAYS">
+                <HBox style="-fx-background-color: #dddddd;" minHeight="30">
+                    <Button fx:id="startButton" onAction="#startMasking" minWidth="30" minHeight="30" maxHeight="30"
+                            maxWidth="30">
+                        <graphic>
+                            <ImageView fitHeight="22" fitWidth="22">
+                                <Image url="@../util/start.png"/>
+                            </ImageView>
+                        </graphic>
+                    </Button>
+                    <Button onAction="#saveConfig" minWidth="30" minHeight="30" maxHeight="30" maxWidth="30">
+                        <graphic>
+                            <ImageView fitHeight="22" fitWidth="22">
+                                <Image url="@../util/upload.png"/>
+                            </ImageView>
+                        </graphic>
+                    </Button>
+                    <Button onAction="#downloadConfig" minWidth="30" minHeight="30" maxHeight="30" maxWidth="30">
+                        <graphic>
+                            <ImageView fitHeight="22" fitWidth="22">
+                                <Image url="@../util/download.png"/>
+                            </ImageView>
+                        </graphic>
+                    </Button>
+                    <Button onAction="#backToOriginDatabase" minWidth="30" minHeight="30" maxHeight="30" maxWidth="30">
+                        <graphic>
+                            <ImageView fitHeight="22" fitWidth="22">
+                                <Image url="@../util/refresh.png"/>
+                            </ImageView>
+                        </graphic>
+                    </Button>
+                </HBox>
+                <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS"/>
+                <HBox style="-fx-background-color: #D3D3D3; -fx-border-style: solid; -fx-border-width: 2 0 0 0; -fx-border-color: #C0C0C0;"
+                      minHeight="20">
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <HBox alignment="CENTER_RIGHT" spacing="10">
+                        <padding>
+                            <Insets right="20" left="20"/>
+                        </padding>
+                        <Button styleClass="arrow-button" onAction="#PageBack">
+                            <graphic>
+                                <Polygon fill="grey" points="10.0,0.0,0.0,5.0,10.0,10.0"/>
+                            </graphic>
+                        </Button>
+                        <TextField fx:id="currentPage"/>
+                        <Label text="/"/>
+                        <Label fx:id="totalPages"/>
+                        <Button styleClass="arrow-button" onAction="#PageNext">
+                            <graphic>
+                                <Polygon fill="grey" points="0.0,0.0,10.0,5.0,0.0,10.0"/>
+                            </graphic>
+                        </Button>
+                    </HBox>
+                </HBox>
+            </VBox>
+
+        </HBox>
+        <VBox>
+            <TabPane minWidth="400" prefHeight="1" VBox.vgrow="ALWAYS" styleClass="sidebar"
+                     tabClosingPolicy="UNAVAILABLE">
+                <Tab text="Подготовка данных">
+                    <ScrollPane minWidth="400" prefHeight="1" VBox.vgrow="ALWAYS" styleClass="sidebar"
+                                fitToWidth="true">
+                        <VBox spacing="5" style="-fx-padding: 5px;">
+                            <HBox spacing="5">
+                                <HBox HBox.hgrow="ALWAYS">
+                                    <Label text="Выбранный атрибут:" styleClass="labelTitle"/>
+                                </HBox>
+                                <ComboBox fx:id="columnPreparationList"
+                                          onAction="#selectPreparationConfigColumnPreparationList" prefWidth="150"/>
+                            </HBox>
+                            <HBox spacing="5">
+                                <HBox HBox.hgrow="ALWAYS">
+                                    <Label text="Тип:" styleClass="labelTitle"/>
+                                </HBox>
+                                <ComboBox fx:id="typeAttributeList" promptText="Выберите тип атрибут"
+                                          onAction="#savePreparation" prefWidth="150">
+                                    <items>
+                                        <FXCollections fx:factory="observableArrayList">
+                                            <String fx:value="Insensitive"/>
+                                            <String fx:value="Sensitive"/>
+                                            <String fx:value="Quasi-Identifying"/>
+                                            <String fx:value="Identifying"/>
+                                        </FXCollections>
+                                    </items>
+                                </ComboBox>
+                            </HBox>
+                            <HBox spacing="5">
+                                <HBox HBox.hgrow="ALWAYS">
+                                    <Label text="Метод заполнения поля:" styleClass="labelTitle"/>
+                                </HBox>
+                                <ComboBox fx:id="preparationMethodList" promptText="Выберите метод заполнения"
+                                          onAction="#savePreparation" prefWidth="150">
+                                    <items>
+                                        <FXCollections fx:factory="observableArrayList">
+                                            <String fx:value="none"/>
+                                            <String fx:value="average"/>
+                                            <String fx:value="median"/>
+                                            <String fx:value="mode"/>
+                                        </FXCollections>
+                                    </items>
+                                </ComboBox>
+                            </HBox>
+                        </VBox>
+                    </ScrollPane>
+                </Tab>
+
+
+                <Tab text="Анонимизация">
+                    <ScrollPane minWidth="400" prefHeight="1" VBox.vgrow="ALWAYS" styleClass="sidebar"
+                                fitToWidth="true">
+                        <VBox spacing="5" style="-fx-padding: 5px;">
+                            <HBox spacing="5">
+                                <HBox HBox.hgrow="ALWAYS">
+                                    <Label text="Выбранный атрибут:" styleClass="labelTitle"/>
+                                </HBox>
+                                <ComboBox fx:id="columnList" onAction="#selectPreparationConfigColumnList"
+                                          prefWidth="150"/>
+                            </HBox>
+                            <VBox spacing="5">
+
+                                <HBox spacing="5">
+                                    <HBox HBox.hgrow="ALWAYS">
+                                        <Label text="Тип данных:" styleClass="labelTitle" HBox.hgrow="ALWAYS"/>
+                                    </HBox>
+                                    <ComboBox fx:id="dateTypeList" onAction="#selectDataType" prefWidth="150">
+                                        <items>
+                                            <FXCollections fx:factory="observableArrayList">
+                                                <String fx:value="String"/>
+                                                <String fx:value="Integer"/>
+                                                <String fx:value="Float"/>
+                                                <String fx:value="Date"/>
+                                            </FXCollections>
+                                        </items>
+                                    </ComboBox>
+                                </HBox>
+                            </VBox>
+                            <Label text="Обезличивание на основе методов изменения состава и/или семантики :" styleClass="labelTitle"/>
+                            <VBox fx:id="masking" spacing="5" alignment="TOP_CENTER"/>
+                            <Label text="Универсальные методы обезличивания:" styleClass="labelTitle"/>
+                            <VBox fx:id="universalMasking" spacing="5" alignment="TOP_CENTER"/>
+                        </VBox>
+                    </ScrollPane>
+                </Tab>
+                <Tab text="Риск">
+                    <ScrollPane minWidth="400" prefHeight="1" VBox.vgrow="ALWAYS" styleClass="sidebar"
+                                fitToWidth="true">
+                        <VBox spacing="5" style="-fx-padding: 5px;">
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="ProsecutorMetricA" text="ProsecutorMetricA"/>
+                                <TextField fx:id="proportionA"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="ProsecutorMetricB" text="ProsecutorMetricB"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="ProsecutorMetricC" text="ProsecutorMetricC"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="GlobalRisk" text="GlobalRisk"/>
+                                <TextField fx:id="proportionGlobal"/>
+                            </HBox>
+
+
+                            <ScrollPane fitToWidth="true" minHeight="400" maxHeight="400">
+                                <VBox fx:id="riskAttribute" spacing="5" style="-fx-padding: 5px"/>
+                            </ScrollPane>
+                        </VBox>
+
+                    </ScrollPane>
+                </Tab>
+                <Tab text="Оценка потерь">
+                    <ScrollPane minWidth="400" prefHeight="1" VBox.vgrow="ALWAYS" styleClass="sidebar"
+                                fitToWidth="true">
+                        <VBox spacing="5" style="-fx-padding: 5px;">
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="assessmentMin" text="min"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="assessmentMax" text="max"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="assessmentAvg" text="avg"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="assessmentRMSE" text="RMSE"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="assessmentMSE" text="MSE"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="assessmentMD" text="MD"/>
+                            </HBox>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="assessmentShannon" text="Shannon"/>
+                            </HBox>
+
+                            <ScrollPane fitToWidth="true" minHeight="400" maxHeight="400">
+                                <VBox fx:id="assessmentAttribute" spacing="5" style="-fx-padding: 5px"/>
+                            </ScrollPane>
+                        </VBox>
+
+                    </ScrollPane>
+                </Tab>
+                <Tab text="Config" onSelectionChanged="#setConfigMethods">
+                    <ScrollPane minWidth="400" prefHeight="1" VBox.vgrow="ALWAYS" styleClass="sidebar"
+                                fitToWidth="true">
+                        <VBox fx:id="config"/>
+                    </ScrollPane>
+                </Tab>
+            </TabPane>
+            <VBox minHeight="200" style="-fx-background-color: #b8b8b8; -fx-padding: 10px" spacing="10">
+                <VBox>
+                    <Label fx:id="statisticTitle" styleClass="risk-title"/>
+                    <Label fx:id="statisticBody" style="-fx-font-size: 14px;"/>
+                </VBox>
+            </VBox>
+        </VBox>
+    </HBox>
+
+
+</AnchorPane>

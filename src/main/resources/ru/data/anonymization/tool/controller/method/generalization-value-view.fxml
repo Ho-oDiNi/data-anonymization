@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+<ScrollPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.data.anonymization.tool.controller.method.GeneralizationValueView"
+            fitToHeight="true"
+            fitToWidth="true"
+            prefHeight="450.0" prefWidth="650.0">
+
+    <VBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Название:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="customName" minWidth="450"/>
+        </HBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Таблица:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="tableName" minWidth="450" disable="true"/>
+        </HBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Атрибут:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="columnName" minWidth="450" disable="true"/>
+        </HBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Новая таблица:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="newTableName" minWidth="450"/>
+        </HBox>
+        <HBox fx:id="instructionBox" style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Способ обобщения:" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <ComboBox fx:id="instruction" prefWidth="150">
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="default"/>
+                        <String fx:value="average"/>
+                        <String fx:value="median"/>
+                        <String fx:value="mode"/>
+                    </FXCollections>
+                </items>
+            </ComboBox>
+        </HBox>
+        <Label text="Введите название диапазона:                                  от                           до" style="-fx-padding: 0px 10px 0px 14px;"/>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <HBox spacing="10" fx:id="valueContainer"/>
+            <Label text="]" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <VBox>
+                <Button text="Добавить" onAction="#addElem"/>
+            </VBox>
+        </HBox>
+
+        <ScrollPane minHeight="125" style="-fx-alignment: center;-fx-border-color: grey" fitToWidth="true">
+            <VBox fx:id="elementView" style="-fx-padding: 10px 0px;"/>
+        </ScrollPane>
+
+
+
+
+        <HBox fx:id="buttonContainer" style="-fx-alignment: center;-fx-padding: 10px 0px;" spacing="10"/>
+    </VBox>
+</ScrollPane>

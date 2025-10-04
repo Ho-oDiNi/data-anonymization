@@ -1,0 +1,5 @@
+.idea
+bags
+*.txt
+target
+src/main/java/*TODO*

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.data.anonymization.tool.controller.SaveView"
+            fitToHeight="true"
+            fitToWidth="true"
+            prefHeight="140.0" prefWidth="400.0">
+
+    <VBox>
+        <HBox style="-fx-alignment: center;-fx-padding: 10px 0px;">
+            <Label text="Имя файла" style="-fx-padding: 0px 10px 0px 0px;"/>
+            <TextField fx:id="customName" minWidth="250"/>
+        </HBox>
+        <HBox VBox.vgrow="ALWAYS" style="-fx-alignment: center;-fx-padding: 10px 0px;" spacing="10">
+            <Button text="Выбрать директорию" onAction="#chooseFile"/>
+            <Label fx:id="filePath" text="Путь неуказан" style="-fx-padding: 0px 10px 0px 0px;"/>
+        </HBox>
+        <HBox fx:id="buttonContainer" style="-fx-alignment: center;-fx-padding: 10px 0px;" spacing="10"/>
+    </VBox>
+</ScrollPane>

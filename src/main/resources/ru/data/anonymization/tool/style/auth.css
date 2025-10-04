@@ -1,0 +1,49 @@
+{
+    -fx-font-family: "Comic Sans MS";
+}
+
+#error {
+    -fx-text-fill: red;
+    -fx-padding: 4px;
+    -fx-font-size: 14px;
+}
+
+.auth-title {
+    -fx-alignment: center;
+    -fx-padding: 16px;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.auth-center {
+    -fx-alignment: center;
+}
+
+.login-view {
+    -fx-pref-width: 600px;
+}
+
+.auth-text {
+    -fx-padding: 8px 2px;
+}
+
+.auth-text-field {
+    -fx-pref-width: 300px;
+}
+
+.auth-text-box {
+    -fx-alignment: center-left;
+}
+
+.auth-btn {
+
+}
+
+.auth-btn-box {
+    -fx-padding: 6px;
+}
+
+.auth-field-box {
+    -fx-pref-width: 300px;
+    -fx-padding: 4px;
+}
