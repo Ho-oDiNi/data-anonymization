@@ -19,6 +19,10 @@ public class DatabaseConnectionService {
     private Connection connection;
     private Statement statement;
 
+    public boolean isConnected() {
+        return connection != null && statement != null;
+    }
+
     public void setNameDB(String newNameDB) {
         database = newNameDB;
         jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
@@ -51,8 +55,12 @@ public class DatabaseConnectionService {
     public boolean disconnect() {
         boolean isConnect;
         try {
-            statement.close();
-            connection.close();
+            if (statement != null) {
+                statement.close();
+            }
+            if (connection != null) {
+                connection.close();
+            }
             isConnect = true;
         } catch (SQLException e) {
             isConnect = false;

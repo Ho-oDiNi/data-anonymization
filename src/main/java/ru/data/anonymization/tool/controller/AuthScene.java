@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.data.anonymization.tool.config.AppContext;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.TableInfoService;
 
 import java.io.IOException;
 
@@ -24,6 +25,7 @@ public class AuthScene {
 
     private static Stage myStage;
     private final DatabaseConnectionService connection;
+    private final TableInfoService tableInfoService;
 
     @FXML
     private Label error;
@@ -49,6 +51,7 @@ public class AuthScene {
         if (isValid()) {
             connection.setConnection(host.getText(), port.getText(), database.getText(), username.getText(), password.getText());
             if (connection.connect()) {
+                tableInfoService.useDatabaseSource();
                 MainScene.loadView(myStage);
             } else {
                 error.setText("Ошибка подключения");
