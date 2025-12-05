@@ -182,25 +182,7 @@ public class MainScene {
 
         if (!tabSelectionListenerSet) {
             tabPane.getSelectionModel().selectedItemProperty().addListener(
-                    (ov, t, t1) -> {
-                        if (t1 == null || t1.getUserData() == null) {
-                            return;
-                        }
-                        page = 1;
-                        currentTableName = (String) t1.getUserData();
-                        t1.setContent(tableInfoService.buildData(currentTableName, page));
-
-                        currentTab = t1;
-                        currentPage.setText(String.valueOf(page));
-
-                        totalPageCount = (int) Math.ceil(
-                                (double) tableInfoService.getTableSize((String) t1.getUserData())
-                                / 500);
-                        totalPages.setText(String.valueOf(totalPageCount));
-
-                        setPreparation();
-                        setColumnListForRiskAndAssessment();
-                    }
+                    (ov, oldTab, newTab) -> showSelectedTable(newTab)
             );
             tabSelectionListenerSet = true;
         }
@@ -226,6 +208,28 @@ public class MainScene {
             tabPane.getTabs().add(tab);
         });
         tabPane.getSelectionModel().select(0);
+        showSelectedTable(tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    private void showSelectedTable(Tab tab) {
+        if (tab == null || tab.getUserData() == null) {
+            return;
+        }
+
+        page = 1;
+        currentTableName = (String) tab.getUserData();
+        tab.setContent(tableInfoService.buildData(currentTableName, page));
+
+        currentTab = tab;
+        currentPage.setText(String.valueOf(page));
+
+        totalPageCount = (int) Math.ceil(
+                (double) tableInfoService.getTableSize(currentTableName)
+                        / 500);
+        totalPages.setText(String.valueOf(totalPageCount));
+
+        setPreparation();
+        setColumnListForRiskAndAssessment();
     }
 
     public static void loadView(Stage stage) {
