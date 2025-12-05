@@ -50,7 +50,7 @@ public class MainScene {
     private int totalPageCount;
     private Tab currentTab;
     private String currentTableName;
-    private boolean tabSelectionListenerSet = false;
+
 
     private final List<MaskMethods> universalMaskMethods = new ArrayList<>();
     private final List<MaskMethods> stringMaskMethods = new ArrayList<>();
@@ -141,7 +141,10 @@ public class MainScene {
             }
             if (value <= totalPageCount && value > 0) {
                 page = value;
-                currentTab.setContent(tableInfoService.buildData(currentTab.getText(), page));
+                String tableName = currentTableName;
+                if (currentTab != null && tableName != null) {
+                    currentTab.setContent(tableInfoService.buildData(tableName, page));
+                }
             } else {
                 currentPage.setText(oldValue);
             }
@@ -180,12 +183,7 @@ public class MainScene {
         boolean hasData = !tables.isEmpty();
         configureDataControls(hasData);
 
-        if (!tabSelectionListenerSet) {
-            tabPane.getSelectionModel().selectedItemProperty().addListener(
-                    (ov, oldTab, newTab) -> showSelectedTable(newTab)
-            );
-            tabSelectionListenerSet = true;
-        }
+
 
         if (!hasData) {
             Tab tab = new Tab("Нет данных");
@@ -205,6 +203,11 @@ public class MainScene {
             tab.setUserData(name);
             tab.setText(name.replaceAll("_", "__"));
             tab.setContent(new Label("Can't show table"));
+            tab.setOnSelectionChanged(event -> {
+                if (tab.isSelected()) {
+                    showSelectedTable(tab);
+                }
+            });
             tabPane.getTabs().add(tab);
         });
         tabPane.getSelectionModel().select(0);
