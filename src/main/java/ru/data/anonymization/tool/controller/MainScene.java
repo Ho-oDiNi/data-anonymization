@@ -10,6 +10,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.converter.DoubleStringConverter;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,17 @@ import ru.data.anonymization.tool.dto.DataPreparationDto;
 import ru.data.anonymization.tool.dto.enums.MaskMethods;
 import ru.data.anonymization.tool.dto.RiskDto;
 import ru.data.anonymization.tool.dto.StatisticResponseDto;
+import ru.data.anonymization.tool.dto.TableData;
 import ru.data.anonymization.tool.service.*;
 import ru.data.anonymization.tool.util.ComponentUtils;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -44,6 +50,7 @@ public class MainScene {
     private int totalPageCount;
     private Tab currentTab;
     private String currentTableName;
+    private boolean tabSelectionListenerSet = false;
 
     private final List<MaskMethods> universalMaskMethods = new ArrayList<>();
     private final List<MaskMethods> stringMaskMethods = new ArrayList<>();
@@ -167,37 +174,58 @@ public class MainScene {
     }
 
     private void refreshTables() {
-
-        //Создаем таблицы
         tabPane.getTabs().clear();
-        tabPane.getSelectionModel().selectedItemProperty().addListener(
-                (ov, t, t1) -> {
-                    if (t1 == null) {
-                        return;
+        List<String> tables = tableInfoService.getTables();
+
+        boolean hasData = !tables.isEmpty();
+        configureDataControls(hasData);
+
+        if (!tabSelectionListenerSet) {
+            tabPane.getSelectionModel().selectedItemProperty().addListener(
+                    (ov, t, t1) -> {
+                        if (t1 == null || t1.getUserData() == null) {
+                            return;
+                        }
+                        page = 1;
+                        currentTableName = (String) t1.getUserData();
+                        t1.setContent(tableInfoService.buildData(currentTableName, page));
+
+                        currentTab = t1;
+                        currentPage.setText(String.valueOf(page));
+
+                        totalPageCount = (int) Math.ceil(
+                                (double) tableInfoService.getTableSize((String) t1.getUserData())
+                                / 500);
+                        totalPages.setText(String.valueOf(totalPageCount));
+
+                        setPreparation();
+                        setColumnListForRiskAndAssessment();
                     }
-                    page = 1;
-                    currentTableName = (String) t1.getUserData(); // Берём оригинал
-                    t1.setContent(tableInfoService.buildData(currentTableName, page));
+            );
+            tabSelectionListenerSet = true;
+        }
 
-                    currentTab = t1;
-                    currentPage.setText(String.valueOf(page));
+        if (!hasData) {
+            Tab tab = new Tab("Нет данных");
+            tab.setContent(new Label("Загрузите данные из БД или CSV файла"));
+            tabPane.getTabs().add(tab);
+            currentTab = null;
+            currentTableName = null;
+            currentPage.setText("0");
+            totalPages.setText("0");
+            columnList.getItems().clear();
+            columnPreparationList.getItems().clear();
+            return;
+        }
 
-                    totalPageCount = (int) Math.ceil(
-                            (double) tableInfoService.getTableSize((String) t1.getUserData())
-                            / 500);
-                    totalPages.setText(String.valueOf(totalPageCount));
-
-                    setPreparation();
-                    setColumnListForRiskAndAssessment();
-                }
-        );
-        tableInfoService.getTables().forEach(name -> {
+        tables.forEach(name -> {
             Tab tab = new Tab();
             tab.setUserData(name);
             tab.setText(name.replaceAll("_", "__"));
             tab.setContent(new Label("Can't show table"));
             tabPane.getTabs().add(tab);
         });
+        tabPane.getSelectionModel().select(0);
     }
 
     public static void loadView(Stage stage) {
@@ -228,6 +256,13 @@ public class MainScene {
         HBox main = (HBox) root.lookup("#main");
         main.prefWidthProperty().bind(((AnchorPane) root).widthProperty());
         main.prefHeightProperty().bind(((AnchorPane) root).heightProperty());
+    }
+
+    private void configureDataControls(boolean hasData) {
+        startButton.setDisable(!hasData);
+        columnList.setDisable(!hasData);
+        columnPreparationList.setDisable(!hasData);
+        dateTypeList.setDisable(!hasData);
     }
 
     //Конфирурируем листы с методами обезличивания
@@ -269,10 +304,12 @@ public class MainScene {
 
         List<String> list = tableInfoService.getColumnNames(currentTableName);
         columnList.getItems().addAll(list);
-        columnList.getSelectionModel().select(0);
-
         columnPreparationList.getItems().addAll(list);
-        columnPreparationList.getSelectionModel().select(0);
+
+        if (!list.isEmpty()) {
+            columnList.getSelectionModel().select(0);
+            columnPreparationList.getSelectionModel().select(0);
+        }
     }
 
     //Выбрали атрибут
@@ -326,6 +363,21 @@ public class MainScene {
 
         typeAttributeList.setOnAction(t -> savePreparation());
         preparationMethodList.setOnAction(t -> savePreparation());
+    }
+
+    @FXML
+    private void loadData() {
+        ChoiceDialog<String> dialog = new ChoiceDialog<>("CSV файл", List.of("CSV файл", "База данных"));
+        dialog.setTitle("Загрузка данных");
+        dialog.setHeaderText("Выберите источник данных");
+        dialog.setContentText("Источник:");
+        dialog.showAndWait().ifPresent(choice -> {
+            if (choice.equals("CSV файл")) {
+                loadCsvDataFromFile();
+            } else {
+                AuthScene.loadView(AppContext.stage);
+            }
+        });
     }
 
     // Сохранение подготовки
@@ -399,6 +451,10 @@ public class MainScene {
         assessmentAttribute.getChildren().clear();
 
         List<String> columns = tableInfoService.getColumnNames(currentTableName);
+
+        if (columns.isEmpty()) {
+            return;
+        }
 
         columns.forEach(col -> {
             List<String> activeColumn = depersonalizationService.getRiskConfig(currentTableName);
@@ -490,6 +546,58 @@ public class MainScene {
     private void setMaskingMethods() {
         universalMaskMethods.forEach(method -> universalMasking.getChildren()
                                                                .add(createMethodButton(method)));
+    }
+
+    private void loadCsvDataFromFile() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Загрузка CSV файла");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV файлы", "*.csv"));
+
+        var file = fileChooser.showOpenDialog(AppContext.stage);
+        if (file == null) {
+            return;
+        }
+
+        try {
+            TableData tableData = parseCsv(file.toPath());
+            tableInfoService.loadCsvData(tableData);
+            refreshTables();
+        } catch (IOException e) {
+            showError("Не удалось загрузить CSV: " + e.getMessage());
+        }
+    }
+
+    private TableData parseCsv(Path filePath) throws IOException {
+        List<String> lines = Files.readAllLines(filePath).stream()
+                .filter(line -> !line.isBlank())
+                .collect(Collectors.toList());
+
+        if (lines.isEmpty()) {
+            throw new IOException("Файл пустой или недоступен");
+        }
+
+        String delimiter = lines.get(0).contains(";") ? ";" : ",";
+        List<String> headers = Arrays.stream(lines.get(0).split(delimiter, -1))
+                .map(String::trim)
+                .collect(Collectors.toList());
+
+        List<List<String>> rows = lines.stream()
+                .skip(1)
+                .map(line -> Arrays.stream(line.split(delimiter, -1))
+                        .map(String::trim)
+                        .collect(Collectors.toList()))
+                .collect(Collectors.toList());
+
+        String tableName = filePath.getFileName().toString().replaceFirst("\\.[^.]+$", "");
+        return new TableData(tableName, headers, rows);
+    }
+
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Ошибка");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     public Button createMethodButton(MaskMethods method) {

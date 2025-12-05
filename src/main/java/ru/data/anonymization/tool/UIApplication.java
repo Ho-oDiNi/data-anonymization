@@ -6,7 +6,7 @@ import javafx.stage.Stage;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Configuration;
 import ru.data.anonymization.tool.config.AppContext;
-import ru.data.anonymization.tool.controller.AuthScene;
+import ru.data.anonymization.tool.controller.MainScene;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
 
 import java.util.Objects;
@@ -33,6 +33,6 @@ public class UIApplication extends Application {
     @Override
     public void start(Stage stage) {
         stage.getIcons().add(new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("icon.png"))));
-        AuthScene.loadView(stage);
+        MainScene.loadView(stage);
     }
 }

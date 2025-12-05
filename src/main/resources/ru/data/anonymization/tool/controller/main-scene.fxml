@@ -26,6 +26,14 @@
                             </ImageView>
                         </graphic>
                     </Button>
+                    <Button fx:id="loadDataButton" onAction="#loadData" minWidth="30" minHeight="30" maxHeight="30"
+                            maxWidth="30">
+                        <graphic>
+                            <ImageView fitHeight="22" fitWidth="22">
+                                <Image url="@../util/load.gif"/>
+                            </ImageView>
+                        </graphic>
+                    </Button>
                     <Button onAction="#saveConfig" minWidth="30" minHeight="30" maxHeight="30" maxWidth="30">
                         <graphic>
                             <ImageView fitHeight="22" fitWidth="22">

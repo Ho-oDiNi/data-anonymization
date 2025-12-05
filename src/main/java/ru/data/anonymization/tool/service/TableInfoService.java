@@ -10,21 +10,63 @@ import javafx.util.Callback;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.data.anonymization.tool.dto.AttributeTypeDto;
+import ru.data.anonymization.tool.dto.TableData;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class TableInfoService {
 
+    private enum DataSourceType {
+        NONE,
+        DATABASE,
+        CSV
+    }
+
     private final DatabaseConnectionService connection;
+    private final Map<String, TableData> csvTables = new ConcurrentHashMap<>();
+    private DataSourceType dataSourceType = DataSourceType.NONE;
+
+    public void useDatabaseSource() {
+        dataSourceType = DataSourceType.DATABASE;
+        csvTables.clear();
+    }
+
+    public void loadCsvData(TableData tableData) {
+        dataSourceType = DataSourceType.CSV;
+        csvTables.clear();
+        csvTables.put(tableData.getName(), tableData);
+    }
+
+    public boolean hasData() {
+        return dataSourceType != DataSourceType.NONE && !getTables().isEmpty();
+    }
+
+    public boolean isDatabaseSourceActive() {
+        return dataSourceType == DataSourceType.DATABASE;
+    }
+
+    public boolean isCsvSourceActive() {
+        return dataSourceType == DataSourceType.CSV;
+    }
 
     public List<String> getTables() {
         List<String> list = new ArrayList<>();
+        if (dataSourceType == DataSourceType.CSV) {
+            list.addAll(csvTables.keySet());
+            return list;
+        }
+        if (dataSourceType == DataSourceType.NONE || !connection.isConnected()) {
+            return list;
+        }
         try {
             ResultSet resultSet = connection.executeQuery(
                     "SELECT tablename FROM pg_catalog.pg_tables where schemaname = 'public';");
@@ -42,35 +84,28 @@ public class TableInfoService {
         ObservableList<ObservableList> data = FXCollections.observableArrayList();
         TableView tableview = new TableView();
         tableview.prefHeight(1000);
-        String firstColumn = getColumnNames(nameTable).get(0);
+        if (dataSourceType == DataSourceType.CSV) {
+            fillTableFromCsv(nameTable, tableview, data, page);
+            return tableview;
+        }
+
+        if (dataSourceType == DataSourceType.NONE || !connection.isConnected()) {
+            return tableview;
+        }
+
+        List<String> columnNames = getColumnNames(nameTable);
+        if (columnNames.isEmpty()) {
+            return tableview;
+        }
+        String firstColumn = columnNames.get(0);
         try {
             String SQL =
                     "SELECT * from " + nameTable + " ORDER BY " + firstColumn + " OFFSET " + (page
                                                                                               * 500)
                     + " LIMIT 500";
             ResultSet rs = connection.executeQuery(SQL);
-            for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
-                final int j = i;
-                TableColumn col = new TableColumn(rs.getMetaData().getColumnName(i + 1));
-                col.setReorderable(false);
-                col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList, String>, ObservableValue<String>>) param -> {
-                    Object elem = param.getValue().get(j);
-                    if (elem != null) {
-                        return new SimpleStringProperty(param.getValue().get(j).toString());
-                    }
-                    return null;
-                });
-
-                tableview.getColumns().addAll(col);
-            }
-            while (rs.next()) {
-                ObservableList<String> row = FXCollections.observableArrayList();
-                for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-                    row.add(rs.getString(i));
-                }
-                data.add(row);
-
-            }
+            addColumns(rs, tableview);
+            fillRows(rs, data);
             tableview.setItems(data);
         } catch (Exception e) {
             e.printStackTrace();
@@ -81,6 +116,16 @@ public class TableInfoService {
 
     public int getTableSize(String nameTable) {
         int size = 0;
+        if (dataSourceType == DataSourceType.CSV) {
+            TableData tableData = csvTables.get(nameTable);
+            if (tableData != null) {
+                return tableData.getRows().size();
+            }
+            return size;
+        }
+        if (dataSourceType == DataSourceType.NONE || !connection.isConnected()) {
+            return size;
+        }
         try {
             String SQL = "SELECT count(*) from " + nameTable;
             ResultSet rs = connection.executeQuery(SQL);
@@ -94,11 +139,20 @@ public class TableInfoService {
 
     // Лист имен колонок
     public List<String> getColumnNames(String tableName) {
-        ResultSet resultSet;
         List<String> columns = new ArrayList<>();
+        if (dataSourceType == DataSourceType.CSV) {
+            TableData tableData = csvTables.get(tableName);
+            if (tableData != null) {
+                columns.addAll(tableData.getColumnNames());
+            }
+            return columns;
+        }
+        if (dataSourceType == DataSourceType.NONE || !connection.isConnected()) {
+            return columns;
+        }
 
         try {
-            resultSet = connection.executeQuery(
+            ResultSet resultSet = connection.executeQuery(
                     "SELECT * FROM " + tableName + " LIMIT 0;"); // Тут прописать столбцы
             ResultSetMetaData metaData = resultSet.getMetaData();
             int columnCount = metaData.getColumnCount();
@@ -112,11 +166,17 @@ public class TableInfoService {
     }
 
     public List<String> getTableNames() {
-        ResultSet resultSet;
         List<String> tables = new ArrayList<>();
+        if (dataSourceType == DataSourceType.CSV) {
+            tables.addAll(csvTables.keySet());
+            return tables;
+        }
+        if (dataSourceType == DataSourceType.NONE || !connection.isConnected()) {
+            return tables;
+        }
 
         try {
-            resultSet = connection.executeQuery(
+            ResultSet resultSet = connection.executeQuery(
                     "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';");
             while (resultSet.next()) {
                 tables.add(resultSet.getString(1));
@@ -132,6 +192,28 @@ public class TableInfoService {
         ArrayList<String> row;
 
         AttributeTypeDto attributeTypeDto = new AttributeTypeDto();
+        if (dataSourceType == DataSourceType.CSV) {
+            TableData tableData = csvTables.get(table);
+            if (tableData == null) {
+                return source;
+            }
+            for (List<String> csvRow : tableData.getRows()) {
+                row = new ArrayList<>();
+                for (String col : column) {
+                    int columnIndex = tableData.getColumnNames().indexOf(col);
+                    if (columnIndex >= 0 && columnIndex < csvRow.size()) {
+                        String value = csvRow.get(columnIndex);
+                        row.add(Optional.ofNullable(value).orElse("NULL"));
+                    }
+                }
+                source.add(row.toArray(new String[0]));
+            }
+            return source;
+        }
+
+        if (dataSourceType == DataSourceType.NONE || !connection.isConnected()) {
+            return source;
+        }
         try {
             for (String col : column) {
                 attributeTypeDto.setTable(table);
@@ -162,6 +244,9 @@ public class TableInfoService {
     }
 
     public String getAttributeType(String tableName, String columnName) {
+        if (dataSourceType != DataSourceType.DATABASE || !connection.isConnected()) {
+            return "Error";
+        }
         var queryToGetDataType = """
                 SELECT  data_type
                 FROM information_schema.columns
@@ -179,6 +264,65 @@ public class TableInfoService {
             return "Error";
         }
 
+    }
+
+    private void fillTableFromCsv(String nameTable, TableView tableview, ObservableList<ObservableList> data, int page) {
+        TableData tableData = csvTables.get(nameTable);
+        if (tableData == null) {
+            return;
+        }
+        for (int i = 0; i < tableData.getColumnNames().size(); i++) {
+            final int columnIndex = i;
+            TableColumn col = new TableColumn(tableData.getColumnNames().get(i));
+            col.setReorderable(false);
+            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList, String>, ObservableValue<String>>
+                    ) param -> {
+                Object elem = param.getValue().get(columnIndex);
+                if (elem != null) {
+                    return new SimpleStringProperty(param.getValue().get(columnIndex).toString());
+                }
+                return null;
+            });
+
+            tableview.getColumns().addAll(col);
+        }
+
+        int startIndex = Math.max(page, 0) * 500;
+        int endIndex = Math.min(startIndex + 500, tableData.getRows().size());
+        for (List<String> rowData : tableData.getRows().subList(Math.min(startIndex, tableData.getRows().size()), endIndex)) {
+            ObservableList<String> row = FXCollections.observableArrayList(rowData);
+            data.add(row);
+        }
+        tableview.setItems(data);
+    }
+
+    private void addColumns(ResultSet rs, TableView tableview) throws SQLException {
+        for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
+            final int j = i;
+            TableColumn col = new TableColumn(rs.getMetaData().getColumnName(i + 1));
+            col.setReorderable(false);
+            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList, String>, ObservableValue<String>>
+                    ) param -> {
+                Object elem = param.getValue().get(j);
+                if (elem != null) {
+                    return new SimpleStringProperty(param.getValue().get(j).toString());
+                }
+                return null;
+            });
+
+            tableview.getColumns().addAll(col);
+        }
+    }
+
+    private void fillRows(ResultSet rs, ObservableList<ObservableList> data) throws SQLException {
+        while (rs.next()) {
+            ObservableList<String> row = FXCollections.observableArrayList();
+            for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                row.add(rs.getString(i));
+            }
+            data.add(row);
+
+        }
     }
 
 }
