@@ -274,6 +274,13 @@ public class MainScene {
 
     //Конфирурируем листы с методами обезличивания
     private void configListOfMaskingMethods() {
+        // Сбрасываем ранее добавленные методы, чтобы избежать дублирования при повторной инициализации
+        universalMaskMethods.clear();
+        stringMaskMethods.clear();
+        integerMaskMethods.clear();
+        floatMaskMethods.clear();
+        dateMaskMethods.clear();
+
         universalMaskMethods.add(MaskMethods.Identifier);
         universalMaskMethods.add(MaskMethods.Decomposition);
         universalMaskMethods.add(MaskMethods.Shuffle);
@@ -551,6 +558,7 @@ public class MainScene {
 
     //Создаем кнопки для удиверсальных методов обезличивания
     private void setMaskingMethods() {
+        universalMasking.getChildren().clear();
         universalMaskMethods.forEach(method -> universalMasking.getChildren()
                                                                .add(createMethodButton(method)));
     }
