@@ -15,6 +15,9 @@ public class DatabaseConnectionService {
     private String username;
     private String password;
 
+    @Getter
+    private String lastErrorMessage;
+
     private String jdbcUrl;
     private Connection connection;
     private Statement statement;
@@ -45,8 +48,13 @@ public class DatabaseConnectionService {
                     ResultSet.TYPE_SCROLL_INSENSITIVE,
                     ResultSet.CONCUR_UPDATABLE
             );
+            lastErrorMessage = null;
             isConnect = true;
         } catch (SQLException e) {
+            lastErrorMessage = e.getLocalizedMessage();
+            isConnect = false;
+        } catch (Exception e) {
+            lastErrorMessage = e.getMessage();
             isConnect = false;
         }
         return isConnect;

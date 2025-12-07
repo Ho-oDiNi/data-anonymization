@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -48,13 +49,18 @@ public class AuthScene {
     @FXML
     private void connection(ActionEvent event) {
         event.consume();
+        error.setText("");
         if (isValid()) {
-            connection.setConnection(host.getText(), port.getText(), database.getText(), username.getText(), password.getText());
-            if (connection.connect()) {
-                tableInfoService.useDatabaseSource();
-                MainScene.loadView(myStage);
-            } else {
-                error.setText("Ошибка подключения");
+            try {
+                connection.setConnection(host.getText(), port.getText(), database.getText(), username.getText(), password.getText());
+                if (connection.connect()) {
+                    tableInfoService.useDatabaseSource();
+                    MainScene.loadView(myStage);
+                } else {
+                    showErrorFromService();
+                }
+            } catch (Exception exception) {
+                showError(String.format("Ошибка подключения: %s", exception.getMessage()));
             }
         } else {
             error.setText("Заполните поля");
@@ -97,5 +103,24 @@ public class AuthScene {
             field.setStyle("");
         }
         return !isValid;
+    }
+
+    private void showError(String message) {
+        error.setText(message);
+
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Ошибка подключения");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showErrorFromService() {
+        String errorMessage = connection.getLastErrorMessage();
+        if (errorMessage == null || errorMessage.isBlank()) {
+            showError("Ошибка подключения");
+        } else {
+            showError(String.format("Ошибка подключения: %s", errorMessage));
+        }
     }
 }
