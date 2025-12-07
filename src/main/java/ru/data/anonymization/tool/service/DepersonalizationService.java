@@ -5,6 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
 import ru.data.anonymization.tool.methods.options.MaskItem;
+import ru.data.anonymization.tool.dto.TableData;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -20,6 +26,8 @@ public class DepersonalizationService {
     private final DatabaseConnectionService controllerDB;
     private final DataPreparationService dataPreparationService;
     private final StatisticService statisticService;
+    private final TableInfoService tableInfoService;
+    private final SelectionService selectionService;
 
     @Getter
     @Setter
@@ -85,8 +93,12 @@ public class DepersonalizationService {
         }
         String time = "0";
         try {
-            init();
-            time = masking();
+            if (tableInfoService.isCsvSourceActive()) {
+                time = maskingCsv();
+            } else {
+                init();
+                time = masking();
+            }
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());
             System.out.println(e.getMessage());
@@ -150,6 +162,59 @@ public class DepersonalizationService {
 
         NumberFormat formatter = new DecimalFormat("#0.00");
         return formatter.format((end - start) / 1000d).replace(",", ".");
+    }
+
+    private String maskingCsv() throws IOException {
+        long start = System.currentTimeMillis();
+        List<TableData> maskedTables = new ArrayList<>();
+
+        for (String tableName : tableInfoService.getTables()) {
+            var tableOptional = tableInfoService.getCsvTable(tableName);
+            if (tableOptional.isEmpty()) {
+                continue;
+            }
+
+            TableData sourceTable = tableOptional.get();
+            List<List<String>> filteredRows = new ArrayList<>();
+            List<List<String>> sourceRows = sourceTable.getRows();
+
+            for (int i = 0; i < sourceRows.size(); i++) {
+                if (!selectionService.hasCustomSelection(tableName)
+                        || selectionService.isRowSelected(tableName, i)) {
+                    filteredRows.add(new ArrayList<>(sourceRows.get(i)));
+                }
+            }
+
+            TableData maskedTable = new TableData(
+                    tableName + "_masked",
+                    sourceTable.getColumnNames(),
+                    filteredRows
+            );
+
+            maskedTables.add(maskedTable);
+            saveTempCsv(maskedTable);
+        }
+
+        if (!maskedTables.isEmpty()) {
+            tableInfoService.loadCsvData(maskedTables);
+        }
+
+        long end = System.currentTimeMillis();
+        NumberFormat formatter = new DecimalFormat("#0.00");
+        return formatter.format((end - start) / 1000d).replace(",", ".");
+    }
+
+    private void saveTempCsv(TableData tableData) throws IOException {
+        String fileName = tableData.getName() + ".csv";
+        Path tempFile = Files.createTempFile(fileName, "");
+
+        List<String> lines = new ArrayList<>();
+        lines.add(String.join(";", tableData.getColumnNames()));
+        for (List<String> row : tableData.getRows()) {
+            lines.add(String.join(";", row));
+        }
+
+        Files.write(tempFile, lines, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
 }
