@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class TableInfoService {
 
+    public static final int PAGE_SIZE = 500;
+
     private enum DataSourceType {
         NONE,
         DATABASE,
@@ -79,10 +81,10 @@ public class TableInfoService {
         return list;
     }
 
-    public TableView buildData(String nameTable, int page) {
+    public TableView<ObservableList<String>> buildData(String nameTable, int page) {
         page--;
-        ObservableList<ObservableList> data = FXCollections.observableArrayList();
-        TableView tableview = new TableView();
+        ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
+        TableView<ObservableList<String>> tableview = new TableView<>();
         tableview.prefHeight(1000);
         if (dataSourceType == DataSourceType.CSV) {
             fillTableFromCsv(nameTable, tableview, data, page);
@@ -101,8 +103,8 @@ public class TableInfoService {
         try {
             String SQL =
                     "SELECT * from " + nameTable + " ORDER BY " + firstColumn + " OFFSET " + (page
-                                                                                              * 500)
-                    + " LIMIT 500";
+                                                                                              * PAGE_SIZE)
+                    + " LIMIT " + PAGE_SIZE;
             ResultSet rs = connection.executeQuery(SQL);
             addColumns(rs, tableview);
             fillRows(rs, data);
@@ -273,9 +275,11 @@ public class TableInfoService {
         }
         for (int i = 0; i < tableData.getColumnNames().size(); i++) {
             final int columnIndex = i;
-            TableColumn col = new TableColumn(tableData.getColumnNames().get(i));
+            TableColumn<ObservableList<String>, String> col = new TableColumn<>(
+                    tableData.getColumnNames().get(i)
+            );
             col.setReorderable(false);
-            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList, String>, ObservableValue<String>>
+            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList<String>, String>, ObservableValue<String>>
                     ) param -> {
                 Object elem = param.getValue().get(columnIndex);
                 if (elem != null) {
@@ -287,8 +291,8 @@ public class TableInfoService {
             tableview.getColumns().addAll(col);
         }
 
-        int startIndex = Math.max(page, 0) * 500;
-        int endIndex = Math.min(startIndex + 500, tableData.getRows().size());
+        int startIndex = Math.max(page, 0) * PAGE_SIZE;
+        int endIndex = Math.min(startIndex + PAGE_SIZE, tableData.getRows().size());
         for (List<String> rowData : tableData.getRows().subList(Math.min(startIndex, tableData.getRows().size()), endIndex)) {
             ObservableList<String> row = FXCollections.observableArrayList(rowData);
             data.add(row);
@@ -299,9 +303,11 @@ public class TableInfoService {
     private void addColumns(ResultSet rs, TableView tableview) throws SQLException {
         for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
             final int j = i;
-            TableColumn col = new TableColumn(rs.getMetaData().getColumnName(i + 1));
+            TableColumn<ObservableList<String>, String> col = new TableColumn<>(
+                    rs.getMetaData().getColumnName(i + 1)
+            );
             col.setReorderable(false);
-            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList, String>, ObservableValue<String>>
+            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList<String>, String>, ObservableValue<String>>
                     ) param -> {
                 Object elem = param.getValue().get(j);
                 if (elem != null) {
