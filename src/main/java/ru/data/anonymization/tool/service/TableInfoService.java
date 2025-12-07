@@ -268,7 +268,8 @@ public class TableInfoService {
 
     }
 
-    private void fillTableFromCsv(String nameTable, TableView tableview, ObservableList<ObservableList> data, int page) {
+    private void fillTableFromCsv(String nameTable, TableView<ObservableList<String>> tableview,
+                                  ObservableList<ObservableList<String>> data, int page) {
         TableData tableData = csvTables.get(nameTable);
         if (tableData == null) {
             return;
@@ -300,7 +301,7 @@ public class TableInfoService {
         tableview.setItems(data);
     }
 
-    private void addColumns(ResultSet rs, TableView tableview) throws SQLException {
+    private void addColumns(ResultSet rs, TableView<ObservableList<String>> tableview) throws SQLException {
         for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
             final int j = i;
             TableColumn<ObservableList<String>, String> col = new TableColumn<>(
@@ -320,7 +321,7 @@ public class TableInfoService {
         }
     }
 
-    private void fillRows(ResultSet rs, ObservableList<ObservableList> data) throws SQLException {
+    private void fillRows(ResultSet rs, ObservableList<ObservableList<String>> data) throws SQLException {
         while (rs.next()) {
             ObservableList<String> row = FXCollections.observableArrayList();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
