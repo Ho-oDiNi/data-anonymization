@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.RowSelectionService;
 
 import java.sql.ResultSet;
 import java.util.Arrays;
@@ -28,7 +29,7 @@ public class MicroAggregationBySingleAxis implements MaskItem {
     }
 
     @Override
-    public void start(DatabaseConnectionService controllerDB) throws Exception {
+    public void start(DatabaseConnectionService controllerDB, RowSelectionService rowSelectionService) throws Exception {
         String nameIdField = "temp_id_group_by_micro_aggregation";
         String columnsRow = convertStringArrayToString(namesColumn, ",");
 

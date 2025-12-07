@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.RowSelectionService;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +17,7 @@ public class DeleteMethod implements MaskItem {
     private List<String> nameColumns;
 
     @Override
-    public void start(DatabaseConnectionService controllerDB) throws Exception {
+    public void start(DatabaseConnectionService controllerDB, RowSelectionService rowSelectionService) throws Exception {
         for (var column : nameColumns) {
             String sql = "ALTER TABLE %1$s DROP COLUMN %2$s;".formatted(nameTable, column);
             controllerDB.execute(sql);

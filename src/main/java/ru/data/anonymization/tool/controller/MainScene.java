@@ -30,6 +30,9 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -41,6 +44,7 @@ public class MainScene {
     private final StatisticService statisticService;
     private final DataPreparationService preparationService;
     private final ViewService viewService;
+    private final RowSelectionService rowSelectionService;
 
     private final SaveView saveView;
     private final DownloadView downloadView;
@@ -74,6 +78,10 @@ public class MainScene {
     private VBox masking;
     @FXML
     private VBox universalMasking;
+    @FXML
+    private Slider anonymizationRateSlider;
+    @FXML
+    private Label anonymizationRateLabel;
     @FXML
     private Label statisticTitle;
     @FXML
@@ -120,6 +128,8 @@ public class MainScene {
     @FXML
     private ComboBox<String> preparationMethodList;
 
+    private final Map<String, Integer> anonymizationPercentageByTable = new HashMap<>();
+
     @FXML
     void initialize() {
         selectPreparationConfigColumnList();
@@ -128,6 +138,7 @@ public class MainScene {
         setMaskingMethods();  // отображаем универсальные методы обезличивания
         selectDataType(); // отображаем методы обезличивания для конкретного типа
         refreshTables();
+        configureAnonymizationSlider();
 
         currentPage.textProperty().addListener((observable, oldValue, newValue) -> {
             if (oldValue.equals(newValue)) {
@@ -143,7 +154,7 @@ public class MainScene {
                 page = value;
                 String tableName = currentTableName;
                 if (currentTab != null && tableName != null) {
-                    currentTab.setContent(tableInfoService.buildData(tableName, page));
+                    refreshCurrentTabContent();
                 }
             } else {
                 currentPage.setText(oldValue);
@@ -195,6 +206,8 @@ public class MainScene {
             totalPages.setText("0");
             columnList.getItems().clear();
             columnPreparationList.getItems().clear();
+            rowSelectionService.clear();
+            anonymizationPercentageByTable.clear();
             return;
         }
 
@@ -221,7 +234,7 @@ public class MainScene {
 
         page = 1;
         currentTableName = (String) tab.getUserData();
-        tab.setContent(tableInfoService.buildData(currentTableName, page));
+        tab.setContent(buildHighlightedTable(currentTableName));
 
         currentTab = tab;
         currentPage.setText(String.valueOf(page));
@@ -231,8 +244,48 @@ public class MainScene {
                         / 500);
         totalPages.setText(String.valueOf(totalPageCount));
 
+        int sliderValue = anonymizationPercentageByTable.getOrDefault(currentTableName,
+                rowSelectionService.getSavedPercentage(currentTableName));
+        anonymizationRateSlider.setValue(sliderValue);
+        anonymizationRateLabel.setText(sliderValue + "%");
+        rowSelectionService.updateSelection(currentTableName, sliderValue);
+
         setPreparation();
         setColumnListForRiskAndAssessment();
+    }
+
+    private TableView<?> buildHighlightedTable(String tableName) {
+        TableView<?> tableView = tableInfoService.buildData(tableName, page);
+        applyRowHighlighting(tableView, tableName);
+        return tableView;
+    }
+
+    private void applyRowHighlighting(TableView<?> tableView, String tableName) {
+        int pageOffset = (page - 1) * 500;
+        Set<Integer> selectedRows = rowSelectionService.getSelection(tableName);
+        tableView.setRowFactory(view -> new TableRow<>() {
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setStyle("");
+                    return;
+                }
+                int rowIndex = getIndex() + pageOffset + 1;
+                if (selectedRows.isEmpty() || rowSelectionService.shouldMask(tableName, rowIndex)) {
+                    setStyle("-fx-background-color: #fff4ce;");
+                } else {
+                    setStyle("");
+                }
+            }
+        });
+    }
+
+    private void refreshCurrentTabContent() {
+        if (currentTab == null || currentTableName == null) {
+            return;
+        }
+        currentTab.setContent(buildHighlightedTable(currentTableName));
     }
 
     public static void loadView(Stage stage) {
@@ -270,6 +323,22 @@ public class MainScene {
         columnList.setDisable(!hasData);
         columnPreparationList.setDisable(!hasData);
         dateTypeList.setDisable(!hasData);
+        anonymizationRateSlider.setDisable(!hasData);
+    }
+
+    private void configureAnonymizationSlider() {
+        anonymizationRateSlider.setValue(100);
+        anonymizationRateLabel.setText("100%");
+        anonymizationRateSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            int value = newValue.intValue();
+            anonymizationRateSlider.setValue(value);
+            anonymizationRateLabel.setText(value + "%");
+            if (currentTableName != null) {
+                anonymizationPercentageByTable.put(currentTableName, value);
+                rowSelectionService.updateSelection(currentTableName, value);
+                refreshCurrentTabContent();
+            }
+        });
     }
 
     //Конфирурируем листы с методами обезличивания

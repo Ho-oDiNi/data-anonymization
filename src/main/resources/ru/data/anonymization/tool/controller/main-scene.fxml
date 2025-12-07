@@ -166,6 +166,14 @@
                             <VBox fx:id="masking" spacing="5" alignment="TOP_CENTER"/>
                             <Label text="Универсальные методы обезличивания:" styleClass="labelTitle"/>
                             <VBox fx:id="universalMasking" spacing="5" alignment="TOP_CENTER"/>
+                            <HBox alignment="CENTER_RIGHT" spacing="10" VBox.vgrow="ALWAYS">
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label text="% выбранных строк:" styleClass="labelTitle"/>
+                                <Slider fx:id="anonymizationRateSlider" min="0" max="100" blockIncrement="1" snapToTicks="true"
+                                        showTickMarks="true" showTickLabels="true" majorTickUnit="25" minorTickCount="4"
+                                        prefWidth="180"/>
+                                <Label fx:id="anonymizationRateLabel" text="100%" styleClass="labelTitle"/>
+                            </HBox>
                         </VBox>
                     </ScrollPane>
                 </Tab>
