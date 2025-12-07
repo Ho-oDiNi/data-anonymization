@@ -1,6 +1,7 @@
 package ru.data.anonymization.tool.controller;
 
 import javafx.application.Platform;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -254,18 +255,18 @@ public class MainScene {
         setColumnListForRiskAndAssessment();
     }
 
-    private TableView<?> buildHighlightedTable(String tableName) {
-        TableView<?> tableView = tableInfoService.buildData(tableName, page);
+    private TableView<ObservableList<String>> buildHighlightedTable(String tableName) {
+        TableView<ObservableList<String>> tableView = tableInfoService.buildData(tableName, page);
         applyRowHighlighting(tableView, tableName);
         return tableView;
     }
 
-    private void applyRowHighlighting(TableView<?> tableView, String tableName) {
+    private void applyRowHighlighting(TableView<ObservableList<String>> tableView, String tableName) {
         int pageOffset = (page - 1) * 500;
         Set<Integer> selectedRows = rowSelectionService.getSelection(tableName);
         tableView.setRowFactory(view -> new TableRow<>() {
             @Override
-            protected void updateItem(Object item, boolean empty) {
+            protected void updateItem(ObservableList<String> item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setStyle("");
