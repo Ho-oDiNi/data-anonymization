@@ -79,10 +79,10 @@ public class TableInfoService {
         return list;
     }
 
-    public TableView buildData(String nameTable, int page) {
+    public TableView<ObservableList<String>> buildData(String nameTable, int page) {
         page--;
-        ObservableList<ObservableList> data = FXCollections.observableArrayList();
-        TableView tableview = new TableView();
+        ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
+        TableView<ObservableList<String>> tableview = new TableView<>();
         tableview.prefHeight(1000);
         if (dataSourceType == DataSourceType.CSV) {
             fillTableFromCsv(nameTable, tableview, data, page);
@@ -266,16 +266,17 @@ public class TableInfoService {
 
     }
 
-    private void fillTableFromCsv(String nameTable, TableView tableview, ObservableList<ObservableList> data, int page) {
+    private void fillTableFromCsv(String nameTable, TableView<ObservableList<String>> tableview,
+                                  ObservableList<ObservableList<String>> data, int page) {
         TableData tableData = csvTables.get(nameTable);
         if (tableData == null) {
             return;
         }
         for (int i = 0; i < tableData.getColumnNames().size(); i++) {
             final int columnIndex = i;
-            TableColumn col = new TableColumn(tableData.getColumnNames().get(i));
+            TableColumn<ObservableList<String>, String> col = new TableColumn<>(tableData.getColumnNames().get(i));
             col.setReorderable(false);
-            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList, String>, ObservableValue<String>>
+            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList<String>, String>, ObservableValue<String>>
                     ) param -> {
                 Object elem = param.getValue().get(columnIndex);
                 if (elem != null) {
@@ -296,12 +297,12 @@ public class TableInfoService {
         tableview.setItems(data);
     }
 
-    private void addColumns(ResultSet rs, TableView tableview) throws SQLException {
+    private void addColumns(ResultSet rs, TableView<ObservableList<String>> tableview) throws SQLException {
         for (int i = 0; i < rs.getMetaData().getColumnCount(); i++) {
             final int j = i;
-            TableColumn col = new TableColumn(rs.getMetaData().getColumnName(i + 1));
+            TableColumn<ObservableList<String>, String> col = new TableColumn<>(rs.getMetaData().getColumnName(i + 1));
             col.setReorderable(false);
-            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList, String>, ObservableValue<String>>
+            col.setCellValueFactory((Callback<TableColumn.CellDataFeatures<ObservableList<String>, String>, ObservableValue<String>>
                     ) param -> {
                 Object elem = param.getValue().get(j);
                 if (elem != null) {
@@ -314,7 +315,7 @@ public class TableInfoService {
         }
     }
 
-    private void fillRows(ResultSet rs, ObservableList<ObservableList> data) throws SQLException {
+    private void fillRows(ResultSet rs, ObservableList<ObservableList<String>> data) throws SQLException {
         while (rs.next()) {
             ObservableList<String> row = FXCollections.observableArrayList();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
