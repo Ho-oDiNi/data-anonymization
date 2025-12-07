@@ -43,9 +43,17 @@ public class TableInfoService {
     }
 
     public void loadCsvData(TableData tableData) {
+        loadCsvData(List.of(tableData));
+    }
+
+    public void loadCsvData(List<TableData> tables) {
         dataSourceType = DataSourceType.CSV;
         csvTables.clear();
-        csvTables.put(tableData.getName(), tableData);
+        tables.forEach(table -> csvTables.put(table.getName(), table));
+    }
+
+    public Optional<TableData> getCsvTable(String name) {
+        return Optional.ofNullable(csvTables.get(name));
     }
 
     public boolean hasData() {
