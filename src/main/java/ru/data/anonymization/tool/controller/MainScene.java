@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
@@ -41,6 +42,7 @@ public class MainScene {
     private final StatisticService statisticService;
     private final DataPreparationService preparationService;
     private final ViewService viewService;
+    private final SelectionService selectionService;
 
     private final SaveView saveView;
     private final DownloadView downloadView;
@@ -119,6 +121,12 @@ public class MainScene {
     private ComboBox<String> dateTypeList;
     @FXML
     private ComboBox<String> preparationMethodList;
+    @FXML
+    private Slider selectionSlider;
+    @FXML
+    private Label selectionValue;
+    @FXML
+    private Button selectionButton;
 
     @FXML
     void initialize() {
@@ -128,6 +136,16 @@ public class MainScene {
         setMaskingMethods();  // отображаем универсальные методы обезличивания
         selectDataType(); // отображаем методы обезличивания для конкретного типа
         refreshTables();
+
+        selectionSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            int percent = newValue.intValue();
+            if (selectionSlider.getValue() != percent) {
+                selectionSlider.setValue(percent);
+            }
+            selectionValue.setText(percent + "%");
+        });
+        selectionSlider.setValue(100);
+        selectionValue.setText("100%");
 
         currentPage.textProperty().addListener((observable, oldValue, newValue) -> {
             if (oldValue.equals(newValue)) {
@@ -143,7 +161,7 @@ public class MainScene {
                 page = value;
                 String tableName = currentTableName;
                 if (currentTab != null && tableName != null) {
-                    currentTab.setContent(tableInfoService.buildData(tableName, page));
+                    updateCurrentTabContent();
                 }
             } else {
                 currentPage.setText(oldValue);
@@ -177,6 +195,7 @@ public class MainScene {
     }
 
     private void refreshTables() {
+        selectionService.clearAll();
         tabPane.getTabs().clear();
         List<String> tables = tableInfoService.getTables();
 
@@ -195,6 +214,7 @@ public class MainScene {
             totalPages.setText("0");
             columnList.getItems().clear();
             columnPreparationList.getItems().clear();
+            selectionSlider.setValue(100);
             return;
         }
 
@@ -221,18 +241,19 @@ public class MainScene {
 
         page = 1;
         currentTableName = (String) tab.getUserData();
-        tab.setContent(tableInfoService.buildData(currentTableName, page));
+        updateCurrentTabContent();
 
         currentTab = tab;
         currentPage.setText(String.valueOf(page));
 
         totalPageCount = (int) Math.ceil(
                 (double) tableInfoService.getTableSize(currentTableName)
-                        / 500);
+                        / TableInfoService.PAGE_SIZE);
         totalPages.setText(String.valueOf(totalPageCount));
 
         setPreparation();
         setColumnListForRiskAndAssessment();
+        selectionSlider.setValue(selectionService.getSelectionPercent(currentTableName));
     }
 
     public static void loadView(Stage stage) {
@@ -270,6 +291,8 @@ public class MainScene {
         columnList.setDisable(!hasData);
         columnPreparationList.setDisable(!hasData);
         dateTypeList.setDisable(!hasData);
+        selectionSlider.setDisable(!hasData);
+        selectionButton.setDisable(!hasData);
     }
 
     //Конфирурируем листы с методами обезличивания
@@ -392,6 +415,20 @@ public class MainScene {
                 AuthScene.loadView(AppContext.stage);
             }
         });
+    }
+
+    @FXML
+    private void applySelection() {
+        if (currentTableName == null) {
+            return;
+        }
+
+        int percent = (int) selectionSlider.getValue();
+        int tableSize = tableInfoService.getTableSize(currentTableName);
+
+        selectionService.selectRows(currentTableName, tableSize, percent);
+        selectionSlider.setValue(selectionService.getSelectionPercent(currentTableName));
+        updateCurrentTabContent();
     }
 
     // Сохранение подготовки
@@ -531,6 +568,49 @@ public class MainScene {
             assessmentAttribute.getChildren().add(checkBox);
         });
 
+    }
+
+    private void updateCurrentTabContent() {
+        if (currentTab == null || currentTableName == null) {
+            return;
+        }
+
+        TableView<ObservableList<String>> tableView = tableInfoService.buildData(currentTableName, page);
+        applyRowHighlighting(tableView);
+        currentTab.setContent(tableView);
+    }
+
+    private void applyRowHighlighting(TableView<ObservableList<String>> tableView) {
+        String tableName = currentTableName;
+        int currentPageNumber = page;
+
+        if (tableName == null) {
+            return;
+        }
+
+        tableView.setRowFactory(view -> new TableRow<>() {
+            @Override
+            protected void updateItem(ObservableList<String> item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setStyle("");
+                    return;
+                }
+
+                if (!selectionService.hasCustomSelection(tableName)) {
+                    setStyle("");
+                    return;
+                }
+
+                int globalIndex = (currentPageNumber - 1) * TableInfoService.PAGE_SIZE + getIndex();
+                if (selectionService.isRowSelected(tableName, globalIndex)) {
+                    setStyle("-fx-background-color: #e3f2fd;");
+                } else {
+                    setStyle("");
+                }
+            }
+        });
     }
 
     //Создаем кнопки для методов обезличивания с определенным типом
