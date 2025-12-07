@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.methods.options.type.ValueVariance.DataType;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.RowSelectionService;
 import ru.data.anonymization.tool.service.TableInfoService;
 
 @Data
@@ -36,7 +37,7 @@ public class SelectionMethod implements MaskItem {
 
 
     @Override
-    public void start(DatabaseConnectionService controllerDB) throws Exception {
+    public void start(DatabaseConnectionService controllerDB, RowSelectionService rowSelectionService) throws Exception {
         log.info("TUT");
         List<Object> objects = new ArrayList<>();
         String sql = "SELECT %1$s FROM %2$s;".formatted(nameColumn, nameTable);

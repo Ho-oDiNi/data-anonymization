@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.RowSelectionService;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -30,7 +31,7 @@ public class GeneralizationString implements MaskItem {
     }
 
     @Override
-    public void start(DatabaseConnectionService controllerDB) throws Exception {
+    public void start(DatabaseConnectionService controllerDB, RowSelectionService rowSelectionService) throws Exception {
         controllerDB.execute("DROP TABLE IF EXISTS " + generalizationTable + ";");
         controllerDB.execute(
                 "CREATE TABLE " + generalizationTable + "(generalization text,value text);");

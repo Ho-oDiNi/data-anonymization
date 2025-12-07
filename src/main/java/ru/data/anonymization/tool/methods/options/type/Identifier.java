@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.RowSelectionService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -38,7 +39,7 @@ public class Identifier implements MaskItem {
     }
 
     @Override
-    public void start(DatabaseConnectionService controllerDB) throws Exception {
+    public void start(DatabaseConnectionService controllerDB, RowSelectionService rowSelectionService) throws Exception {
         for (var columns : namesColumn) {
             String nameTempIdField = "temp_id_by_identifier";
             int length;

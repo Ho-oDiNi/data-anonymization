@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.RowSelectionService;
 
 @Data
 @NoArgsConstructor
@@ -25,7 +26,7 @@ public class RoundDate implements MaskItem {
     }
 
     @Override
-    public void start(DatabaseConnectionService controllerDB) throws Exception {
+    public void start(DatabaseConnectionService controllerDB, RowSelectionService rowSelectionService) throws Exception {
         String typeFor = switch (type) {
             case "yyyy/MM/dd hh:mm:ss" -> "second";
             case "yyyy/MM/dd hh:mm" -> "minute";

@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.service.DatabaseConnectionService;
+import ru.data.anonymization.tool.service.RowSelectionService;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ public class Shuffle implements MaskItem {
     }
 
     @Override
-    public void start(DatabaseConnectionService controllerDB) throws Exception {
+    public void start(DatabaseConnectionService controllerDB, RowSelectionService rowSelectionService) throws Exception {
         for (String columnsRow : namesColumn) {
             String newNameTable = "mixing_instructions_" + columnsRow;
             List<Integer> oldPosition = new ArrayList<>();

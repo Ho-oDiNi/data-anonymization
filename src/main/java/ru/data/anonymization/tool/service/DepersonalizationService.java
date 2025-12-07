@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
 import ru.data.anonymization.tool.methods.options.MaskItem;
+import ru.data.anonymization.tool.service.RowSelectionService;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -20,6 +21,7 @@ public class DepersonalizationService {
     private final DatabaseConnectionService controllerDB;
     private final DataPreparationService dataPreparationService;
     private final StatisticService statisticService;
+    private final RowSelectionService rowSelectionService;
 
     @Getter
     @Setter
@@ -140,7 +142,7 @@ public class DepersonalizationService {
         long start = System.currentTimeMillis();
 
         for (MaskItem method : methods) {
-            method.start(controllerDB);
+            method.start(controllerDB, rowSelectionService);
         }
 
         long end = System.currentTimeMillis();
