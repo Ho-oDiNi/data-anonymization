@@ -7,9 +7,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -268,22 +265,10 @@ public class MainScene {
             stage.setMinWidth(800);
             stage.setMinHeight(400);
             stage.show();
-            initViewProperty(root);
             AppContext.stage = stage;
         } catch (IOException ignore) {
         }
 
-    }
-
-    public static void initViewProperty(Parent root) {
-        HBox boxTabPane = (HBox) root.lookup("#boxTabPane");
-        TabPane tabPane = (TabPane) root.lookup("#tabPane");
-        HBox.setHgrow(boxTabPane, Priority.ALWAYS);
-        HBox.setHgrow(tabPane, Priority.ALWAYS);
-
-        HBox main = (HBox) root.lookup("#main");
-        main.prefWidthProperty().bind(((AnchorPane) root).widthProperty());
-        main.prefHeightProperty().bind(((AnchorPane) root).heightProperty());
     }
 
     private void configureDataControls(boolean hasData) {
