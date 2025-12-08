@@ -94,6 +94,9 @@ public class TableInfoService {
         ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
         TableView<ObservableList<String>> tableview = new TableView<>();
         tableview.prefHeight(1000);
+        if (nameTable == null) {
+            return tableview;
+        }
         if (dataSourceType == DataSourceType.CSV) {
             fillTableFromCsv(nameTable, tableview, data, page);
             return tableview;
@@ -126,6 +129,9 @@ public class TableInfoService {
 
     public int getTableSize(String nameTable) {
         int size = 0;
+        if (nameTable == null) {
+            return size;
+        }
         if (dataSourceType == DataSourceType.CSV) {
             TableData tableData = csvTables.get(nameTable);
             if (tableData != null) {
@@ -150,6 +156,9 @@ public class TableInfoService {
     // Лист имен колонок
     public List<String> getColumnNames(String tableName) {
         List<String> columns = new ArrayList<>();
+        if (tableName == null) {
+            return columns;
+        }
         if (dataSourceType == DataSourceType.CSV) {
             TableData tableData = csvTables.get(tableName);
             if (tableData != null) {
@@ -200,6 +209,10 @@ public class TableInfoService {
     public List<String[]> getTableLikeList(String table, List<String> column) {
         List<String[]> source = new ArrayList<>();
         ArrayList<String> row;
+
+        if (table == null || column == null || column.isEmpty()) {
+            return source;
+        }
 
         AttributeTypeDto attributeTypeDto = new AttributeTypeDto();
         if (dataSourceType == DataSourceType.CSV) {
