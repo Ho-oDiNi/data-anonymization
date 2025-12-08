@@ -20,7 +20,14 @@ public class DatabaseConnectionService {
     private Statement statement;
 
     public boolean isConnected() {
-        return connection != null && statement != null;
+        try {
+            return connection != null
+                    && statement != null
+                    && !connection.isClosed()
+                    && !statement.isClosed();
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     public void setNameDB(String newNameDB) {
@@ -61,6 +68,8 @@ public class DatabaseConnectionService {
             if (connection != null) {
                 connection.close();
             }
+            statement = null;
+            connection = null;
             isConnect = true;
         } catch (SQLException e) {
             isConnect = false;
