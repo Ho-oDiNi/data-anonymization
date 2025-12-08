@@ -238,9 +238,8 @@ public class MainScene {
 
         page = 1;
         currentTableName = (String) tab.getUserData();
-        updateCurrentTabContent();
-
         currentTab = tab;
+        updateCurrentTabContent();
         currentPage.setText(String.valueOf(page));
 
         totalPageCount = (int) Math.ceil(
