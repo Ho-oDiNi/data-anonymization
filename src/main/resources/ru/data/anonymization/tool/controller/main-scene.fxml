@@ -14,8 +14,8 @@
             stylesheets="@../style/main.css">
 
 
-    <HBox fx:id="main">
-        <HBox fx:id="boxTabPane" minWidth="1" prefWidth="1">
+    <HBox fx:id="main" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <HBox fx:id="boxTabPane" minWidth="1" prefWidth="1" HBox.hgrow="ALWAYS">
             <VBox HBox.hgrow="ALWAYS">
                 <HBox style="-fx-background-color: #dddddd;" minHeight="30">
                     <Button fx:id="startButton" onAction="#startMasking" minWidth="30" minHeight="30" maxHeight="30"
