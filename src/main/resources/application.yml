@@ -1,0 +1,7 @@
+app:
+  database:
+    host: ${APP_DB_HOST:localhost}
+    port: ${APP_DB_PORT:5432}
+    name: ${APP_DB_NAME:postgres}
+    username: ${APP_DB_USERNAME:postgres}
+    password: ${APP_DB_PASSWORD:postgres}

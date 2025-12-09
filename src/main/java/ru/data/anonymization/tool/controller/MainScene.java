@@ -40,6 +40,7 @@ public class MainScene {
     private final DataPreparationService preparationService;
     private final ViewService viewService;
     private final SelectionService selectionService;
+    private final DatabaseConnectionService databaseConnectionService;
 
     private final SaveView saveView;
     private final DownloadView downloadView;
@@ -237,6 +238,16 @@ public class MainScene {
         });
         tabPane.getSelectionModel().select(0);
         showSelectedTable(tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    private void selectTableTab(String tableName) {
+        if (tableName == null) {
+            return;
+        }
+        tabPane.getTabs().stream()
+                .filter(tab -> tableName.equals(tab.getUserData()))
+                .findFirst()
+                .ifPresent(tab -> tabPane.getSelectionModel().select(tab));
     }
 
     private void showSelectedTable(Tab tab) {
@@ -652,10 +663,16 @@ public class MainScene {
         }
 
         try {
+            if (!databaseConnectionService.connectWithDefaultSettings()) {
+                showError("Не удалось подключиться к базе данных по предустановленным параметрам");
+                return;
+            }
+
             TableData tableData = parseCsv(file.toPath());
-            tableInfoService.loadCsvData(tableData);
+            String importedTable = tableInfoService.importCsvTable(tableData);
             refreshTables();
-        } catch (IOException e) {
+            selectTableTab(importedTable);
+        } catch (Exception e) {
             showError("Не удалось загрузить CSV: " + e.getMessage());
         }
     }
