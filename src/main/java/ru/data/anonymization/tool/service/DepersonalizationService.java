@@ -275,11 +275,18 @@ public class DepersonalizationService {
             String backupTableName = entry.getValue();
             Set<Integer> selectedRows = selectionService.getSelectedRows(tableName);
 
+            List<String> columnNames = tableInfoService.getColumnNames(tableName);
+            if (columnNames.isEmpty()) {
+                continue;
+            }
+            String insertColumns = buildQuotedColumns(columnNames);
+            String selectColumns = buildSelectColumnsForRestore(columnNames);
+
             controllerDB.execute("DELETE FROM " + tableName + " WHERE "
                     + buildNotSelectedCondition(selectedRows) + ";");
 
-            controllerDB.execute("INSERT INTO " + tableName + " SELECT * FROM "
-                    + backupTableName + ";");
+            controllerDB.execute("INSERT INTO " + tableName + " (" + insertColumns + ") SELECT "
+                    + selectColumns + " FROM " + backupTableName + ";");
 
             controllerDB.execute("DROP TABLE IF EXISTS " + backupTableName + ";");
             controllerDB.execute("ALTER TABLE " + tableName + " DROP COLUMN IF EXISTS "
@@ -297,6 +304,23 @@ public class DepersonalizationService {
                                              .map(index -> "CAST(" + index + " AS BIGINT)")
                                              .collect(Collectors.joining(","));
         return INDEX_COLUMN_NAME + " NOT IN (" + selectedIndexes + ")";
+    }
+
+    private String buildQuotedColumns(List<String> columnNames) {
+        return columnNames.stream()
+                          .map(column -> "\"" + column + "\"")
+                          .collect(Collectors.joining(", "));
+    }
+
+    private String buildSelectColumnsForRestore(List<String> columnNames) {
+        return columnNames.stream()
+                          .map(column -> {
+                              if (INDEX_COLUMN_NAME.equals(column)) {
+                                  return "CAST(\"" + column + "\" AS BIGINT) AS \"" + column + "\"";
+                              }
+                              return "\"" + column + "\"";
+                          })
+                          .collect(Collectors.joining(", "));
     }
 
 }
