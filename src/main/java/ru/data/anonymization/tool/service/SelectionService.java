@@ -41,6 +41,10 @@ public class SelectionService {
         return selectedRowsByTable.containsKey(tableName);
     }
 
+    public Set<Integer> getSelectedRows(String tableName) {
+        return new HashSet<>(selectedRowsByTable.getOrDefault(tableName, Collections.emptySet()));
+    }
+
     public boolean isRowSelected(String tableName, int rowIndex) {
         Set<Integer> selectedRows = selectedRowsByTable.get(tableName);
         if (selectedRows == null) {
