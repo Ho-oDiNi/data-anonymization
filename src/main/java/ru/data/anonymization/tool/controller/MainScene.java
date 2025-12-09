@@ -203,7 +203,10 @@ public class MainScene {
 
         if (!hasData) {
             Tab tab = new Tab("Нет данных");
-            tab.setContent(new Label("Загрузите данные из БД или CSV файла"));
+            TableView<ObservableList<String>> emptyTable = tableInfoService.buildData(null, 1);
+            emptyTable.setPlaceholder(new Label(""));
+
+            tab.setContent(emptyTable);
             tabPane.getTabs().add(tab);
             currentTab = null;
             currentTableName = null;
