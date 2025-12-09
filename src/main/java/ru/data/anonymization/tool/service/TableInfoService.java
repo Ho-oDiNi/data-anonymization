@@ -12,14 +12,17 @@ import org.springframework.stereotype.Service;
 import ru.data.anonymization.tool.dto.AttributeTypeDto;
 import ru.data.anonymization.tool.dto.TableData;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +53,23 @@ public class TableInfoService {
         dataSourceType = DataSourceType.CSV;
         csvTables.clear();
         tables.forEach(table -> csvTables.put(table.getName(), table));
+    }
+
+    public String importCsvTable(TableData tableData) throws SQLException {
+        if (tableData == null || tableData.getColumnNames().isEmpty()) {
+            throw new IllegalArgumentException("Пустые данные CSV невозможно импортировать");
+        }
+        if (!connection.isConnected()) {
+            throw new IllegalStateException("Нет подключения к базе данных");
+        }
+
+        String tableName = normalizeIdentifier(tableData.getName());
+        List<String> columnNames = sanitizeColumnNames(tableData.getColumnNames());
+
+        recreateTable(tableName, columnNames);
+        insertRows(tableName, columnNames, tableData.getRows());
+        useDatabaseSource();
+        return tableName;
     }
 
     public Optional<TableData> getCsvTable(String name) {
@@ -351,6 +371,73 @@ public class TableInfoService {
             data.add(row);
 
         }
+    }
+
+    private void recreateTable(String tableName, List<String> columnNames) throws SQLException {
+        String quotedTableName = quoteIdentifier(tableName);
+        String columnDefinition = columnNames.stream()
+                .map(name -> quoteIdentifier(name) + " TEXT")
+                .collect(Collectors.joining(", "));
+
+        connection.execute("DROP TABLE IF EXISTS " + quotedTableName + " CASCADE;");
+        connection.execute("CREATE TABLE " + quotedTableName + " (" + columnDefinition + ");");
+    }
+
+    private void insertRows(String tableName, List<String> columnNames, List<List<String>> rows) throws SQLException {
+        if (rows.isEmpty()) {
+            return;
+        }
+
+        String quotedTableName = quoteIdentifier(tableName);
+        String preparedColumns = columnNames.stream()
+                .map(this::quoteIdentifier)
+                .collect(Collectors.joining(", "));
+        String placeholders = columnNames.stream()
+                .map(col -> "?")
+                .collect(Collectors.joining(", "));
+
+        String insertSql = "INSERT INTO " + quotedTableName + " (" + preparedColumns + ") VALUES (" + placeholders + ")";
+        PreparedStatement statement = connection.getPrepareStatement(insertSql);
+
+        for (List<String> row : rows) {
+            for (int i = 0; i < columnNames.size(); i++) {
+                String value = row.size() > i ? row.get(i) : null;
+                statement.setString(i + 1, value);
+            }
+            statement.addBatch();
+        }
+        statement.executeBatch();
+        statement.close();
+    }
+
+    private List<String> sanitizeColumnNames(List<String> sourceColumnNames) {
+        Map<String, Integer> duplicateCounters = new HashMap<>();
+        return sourceColumnNames.stream()
+                .map(this::normalizeIdentifier)
+                .map(name -> {
+                    int count = duplicateCounters.getOrDefault(name, 0);
+                    duplicateCounters.put(name, count + 1);
+                    if (count == 0) {
+                        return name;
+                    }
+                    return name + "_" + count;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private String normalizeIdentifier(String rawName) {
+        String sanitized = rawName == null ? "" : rawName.replaceAll("[^a-zA-Z0-9_]", "_");
+        if (sanitized.isBlank()) {
+            sanitized = "imported_table";
+        }
+        if (Character.isDigit(sanitized.charAt(0))) {
+            sanitized = "_" + sanitized;
+        }
+        return sanitized.toLowerCase();
+    }
+
+    private String quoteIdentifier(String identifier) {
+        return "\"" + identifier + "\"";
     }
 
 }
