@@ -8,8 +8,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -72,10 +70,6 @@ public class AuthScene {
             stage.setTitle("Authorization");
             stage.setResizable(false);
             stage.show();
-
-            VBox main = (VBox) root.lookup("#main");
-            main.prefWidthProperty().bind(((AnchorPane) root).widthProperty());
-            main.prefHeightProperty().bind(((AnchorPane) root).heightProperty());
         } catch (IOException e) {
             e.printStackTrace();
         }

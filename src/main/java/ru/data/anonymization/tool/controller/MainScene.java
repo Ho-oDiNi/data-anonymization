@@ -191,7 +191,16 @@ public class MainScene {
         ));
     }
 
+    private boolean refreshInProgress = false;
     private void refreshTables() {
+        if (refreshInProgress) {
+            System.out.println("[DEBUG] refreshTables: re-entry prevented");
+            return;
+        }
+        refreshInProgress = true;
+        try {
+            System.out.println("[DEBUG] refreshTables() start");
+
         selectionService.clearAll();
         tabPane.getTabs().clear();
         List<String> tables = tableInfoService.getTables();
@@ -229,12 +238,24 @@ public class MainScene {
         });
         tabPane.getSelectionModel().select(0);
         showSelectedTable(tabPane.getSelectionModel().getSelectedItem());
+        System.out.println("[DEBUG] refreshTables() end");
+    } finally {
+        refreshInProgress = false;
+    }
     }
 
+    private boolean showInProgress = false;
     private void showSelectedTable(Tab tab) {
-        if (tab == null || tab.getUserData() == null) {
+        if (showInProgress) {
+            System.out.println("[DEBUG] showSelectedTable: re-entry prevented");
             return;
         }
+        showInProgress = true;
+        try {
+            if (tab == null || tab.getUserData() == null) {
+                return;
+            }
+            System.out.println("[DEBUG] showSelectedTable for table = " + tab.getUserData());
 
         page = 1;
         currentTableName = (String) tab.getUserData();
@@ -250,6 +271,9 @@ public class MainScene {
         setPreparation();
         setColumnListForRiskAndAssessment();
         selectionSlider.setValue(selectionService.getSelectionPercent(currentTableName));
+        } finally {
+            showInProgress = false;
+        }
     }
 
     public static void loadView(Stage stage) {
@@ -388,6 +412,7 @@ public class MainScene {
 
     @FXML
     private void loadData() {
+        System.out.println("[DEBUG] loadData() invoked");
         ChoiceDialog<String> dialog = new ChoiceDialog<>("CSV файл", List.of("CSV файл", "База данных"));
         dialog.setTitle("Загрузка данных");
         dialog.setHeaderText("Выберите источник данных");
@@ -556,9 +581,11 @@ public class MainScene {
 
     private void updateCurrentTabContent() {
         if (currentTab == null || currentTableName == null) {
+            System.out.println("[DEBUG] updateCurrentTabContent: currentTab or currentTableName is null");
             return;
         }
 
+        System.out.println("[DEBUG] updateCurrentTabContent: table=" + currentTableName + ", page=" + page);
         TableView<ObservableList<String>> tableView = tableInfoService.buildData(currentTableName, page);
         applyRowHighlighting(tableView);
         currentTab.setContent(tableView);
@@ -628,19 +655,26 @@ public class MainScene {
     }
 
     private void loadCsvDataFromFile() {
+        System.out.println("[DEBUG] loadCsvDataFromFile() invoked");
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Загрузка CSV файла");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV файлы", "*.csv"));
 
         var file = fileChooser.showOpenDialog(AppContext.stage);
         if (file == null) {
+            System.out.println("[DEBUG] fileChooser: no file selected");
             return;
         }
 
+        System.out.println("[DEBUG] Selected file: " + file.getAbsolutePath());
         try {
             TableData tableData = parseCsv(file.toPath());
+            System.out.println("[DEBUG] parseCsv OK, rows = " + tableData.getRows().size());
             tableInfoService.loadCsvData(tableData);
+            System.out.println("[DEBUG] loadCsvData() done, calling refreshTables()");
             refreshTables();
+            System.out.println("[DEBUG] refreshTables() returned");
         } catch (IOException e) {
             showError("Не удалось загрузить CSV: " + e.getMessage());
         }

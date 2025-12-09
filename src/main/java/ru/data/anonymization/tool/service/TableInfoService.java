@@ -43,6 +43,10 @@ public class TableInfoService {
     }
 
     public void loadCsvData(TableData tableData) {
+        System.out.println("[DEBUG] TableInfoService.loadCsvData: name=" + tableData.getName()
+                + ", rows=" + tableData.getRows().size()
+                + ", columns=" + tableData.getColumnNames().size());
+
         loadCsvData(List.of(tableData));
     }
 
@@ -90,6 +94,7 @@ public class TableInfoService {
     }
 
     public TableView<ObservableList<String>> buildData(String nameTable, int page) {
+        System.out.println("[DEBUG] buildData(" + nameTable + ", page=" + page + "), dataSourceType=" + dataSourceType);
         page--;
         ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
         TableView<ObservableList<String>> tableview = new TableView<>();

@@ -32,6 +32,11 @@ public class UIApplication extends Application {
 
     @Override
     public void start(Stage stage) {
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            System.out.println("=== Uncaught exception in thread: " + t.getName() + " ===");
+            e.printStackTrace();
+        });
+
         stage.getIcons().add(new Image(Objects.requireNonNull(this.getClass().getResourceAsStream("icon.png"))));
         MainScene.loadView(stage);
     }

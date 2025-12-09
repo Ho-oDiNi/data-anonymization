@@ -9,7 +9,12 @@
             stylesheets="@../style/auth.css">
 
 
-    <VBox fx:id="main" styleClass="auth-center">
+    <VBox fx:id="main"
+          styleClass="auth-center"
+          AnchorPane.topAnchor="0.0"
+          AnchorPane.bottomAnchor="0.0"
+          AnchorPane.leftAnchor="0.0"
+          AnchorPane.rightAnchor="0.0">
         <VBox>
             <HBox styleClass="auth-center">
                 <Label styleClass="auth-title" text="Авторизация"/>
