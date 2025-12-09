@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.dto.TableData;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -164,44 +163,118 @@ public class DepersonalizationService {
         return formatter.format((end - start) / 1000d).replace(",", ".");
     }
 
-    private String maskingCsv() throws IOException {
+    private String maskingCsv() throws Exception {
         long start = System.currentTimeMillis();
-        List<TableData> maskedTables = new ArrayList<>();
 
+        List<TableData> sourceTables = new ArrayList<>();
         for (String tableName : tableInfoService.getTables()) {
-            var tableOptional = tableInfoService.getCsvTable(tableName);
-            if (tableOptional.isEmpty()) {
-                continue;
-            }
-
-            TableData sourceTable = tableOptional.get();
-            List<List<String>> filteredRows = new ArrayList<>();
-            List<List<String>> sourceRows = sourceTable.getRows();
-
-            for (int i = 0; i < sourceRows.size(); i++) {
-                if (!selectionService.hasCustomSelection(tableName)
-                        || selectionService.isRowSelected(tableName, i)) {
-                    filteredRows.add(new ArrayList<>(sourceRows.get(i)));
-                }
-            }
-
-            TableData maskedTable = new TableData(
-                    tableName + "_masked",
-                    sourceTable.getColumnNames(),
-                    filteredRows
-            );
-
-            maskedTables.add(maskedTable);
-            saveTempCsv(maskedTable);
+            tableInfoService.getCsvTable(tableName).ifPresent(sourceTables::add);
+        }
+        if (sourceTables.isEmpty()) {
+            return "0";
         }
 
+        prepareTemporaryDatabase(sourceTables);
+
+        statisticService.resetStatistic();
+        statisticService.setNotMaskStatistic(assessmentConfigMap);
+
+        dataPreparationService.start();
+
+        for (MaskItem method : methods) {
+            method.start(controllerDB);
+        }
+
+        List<TableData> maskedTables = exportTables(sourceTables);
         if (!maskedTables.isEmpty()) {
             tableInfoService.loadCsvData(maskedTables);
         }
 
+        backToOriginDatabase();
+
         long end = System.currentTimeMillis();
         NumberFormat formatter = new DecimalFormat("#0.00");
         return formatter.format((end - start) / 1000d).replace(",", ".");
+    }
+
+    private void prepareTemporaryDatabase(List<TableData> sourceTables) throws Exception {
+        oldConnection = controllerDB.getDatabase();
+        String tempDatabase = "csv_mask_" + System.currentTimeMillis();
+
+        controllerDB.execute("DROP DATABASE IF EXISTS " + tempDatabase + ";");
+        controllerDB.execute(
+                "CREATE DATABASE " + tempDatabase
+                        + " OWNER " + controllerDB.getUsername() + ";");
+
+        controllerDB.setNameDB(tempDatabase);
+        controllerDB.disconnect();
+        controllerDB.connect();
+        tableInfoService.useDatabaseSource();
+
+        for (TableData tableData : sourceTables) {
+            createTableFromCsv(tableData);
+        }
+    }
+
+    private void createTableFromCsv(TableData tableData) throws Exception {
+        StringBuilder createSql = new StringBuilder("CREATE TABLE ")
+                .append(tableData.getName())
+                .append(" (");
+
+        List<String> columns = tableData.getColumnNames();
+        for (int i = 0; i < columns.size(); i++) {
+            createSql.append(columns.get(i)).append(" TEXT");
+            if (i < columns.size() - 1) {
+                createSql.append(", ");
+            }
+        }
+        createSql.append(");");
+        controllerDB.execute(createSql.toString());
+
+        String placeholders = String.join(", ", columns.stream().map(col -> "?").toList());
+        String insertSql = "INSERT INTO " + tableData.getName() + " ("
+                + String.join(", ", columns) + ") VALUES (" + placeholders + ");";
+
+        for (int rowIndex = 0; rowIndex < tableData.getRows().size(); rowIndex++) {
+            if (selectionService.hasCustomSelection(tableData.getName())
+                    && !selectionService.isRowSelected(tableData.getName(), rowIndex)) {
+                continue;
+            }
+
+            List<String> row = tableData.getRows().get(rowIndex);
+            try (var statement = controllerDB.getPrepareStatement(insertSql)) {
+                for (int i = 0; i < columns.size(); i++) {
+                    statement.setString(i + 1, row.get(i));
+                }
+                statement.execute();
+            }
+        }
+    }
+
+    private List<TableData> exportTables(List<TableData> sourceTables) throws Exception {
+        List<TableData> maskedTables = new ArrayList<>();
+        for (TableData sourceTable : sourceTables) {
+            String tableName = sourceTable.getName();
+            List<String> columns = tableInfoService.getColumnNames(tableName);
+            List<List<String>> rows = new ArrayList<>();
+
+            String query = "SELECT * FROM " + tableName + ";";
+            try (var rs = controllerDB.executeQuery(query)) {
+                while (rs.next()) {
+                    List<String> row = new ArrayList<>();
+                    for (String column : columns) {
+                        Object value = rs.getObject(column);
+                        row.add(value != null ? value.toString() : null);
+                    }
+                    rows.add(row);
+                }
+            }
+
+            TableData maskedTable = new TableData(tableName + "_masked", columns, rows);
+            maskedTables.add(maskedTable);
+            saveTempCsv(maskedTable);
+        }
+        return maskedTables;
     }
 
     private void saveTempCsv(TableData tableData) throws IOException {
