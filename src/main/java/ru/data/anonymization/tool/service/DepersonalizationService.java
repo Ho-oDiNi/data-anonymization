@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +40,7 @@ public class DepersonalizationService {
 
     private List<MaskItem> methods = new ArrayList<>();
     private String oldConnection = null;
+    private static final String INDEX_COLUMN_NAME = "masking_row_index";
 
     public void addRiskConfig(String key, List<String> columns) {
         riskConfigMap.put(key, columns);
@@ -147,21 +150,27 @@ public class DepersonalizationService {
         statisticService.resetStatistic();
         statisticService.setNotMaskStatistic(assessmentConfigMap);
 
-        dataPreparationService.start();
+        Map<String, String> backupTables = prepareSelectionBackups();
 
-        long start = System.currentTimeMillis();
+        try {
+            dataPreparationService.start();
 
-        for (MaskItem method : methods) {
-            method.start(controllerDB);
+            long start = System.currentTimeMillis();
+
+            for (MaskItem method : methods) {
+                method.start(controllerDB);
+            }
+
+            long end = System.currentTimeMillis();
+
+            statisticService.calculateRisk(riskConfigMap);
+            statisticService.setMaskStatistic(assessmentConfigMap);
+
+            NumberFormat formatter = new DecimalFormat("#0.00");
+            return formatter.format((end - start) / 1000d).replace(",", ".");
+        } finally {
+            restoreUnselectedRows(backupTables);
         }
-
-        long end = System.currentTimeMillis();
-
-        statisticService.calculateRisk(riskConfigMap);
-        statisticService.setMaskStatistic(assessmentConfigMap);
-
-        NumberFormat formatter = new DecimalFormat("#0.00");
-        return formatter.format((end - start) / 1000d).replace(",", ".");
     }
 
     private String maskingCsv() throws IOException {
@@ -179,10 +188,8 @@ public class DepersonalizationService {
             List<List<String>> sourceRows = sourceTable.getRows();
 
             for (int i = 0; i < sourceRows.size(); i++) {
-                if (!selectionService.hasCustomSelection(tableName)
-                        || selectionService.isRowSelected(tableName, i)) {
-                    filteredRows.add(new ArrayList<>(sourceRows.get(i)));
-                }
+                List<String> rowCopy = new ArrayList<>(sourceRows.get(i));
+                filteredRows.add(rowCopy);
             }
 
             TableData maskedTable = new TableData(
@@ -215,6 +222,79 @@ public class DepersonalizationService {
         }
 
         Files.write(tempFile, lines, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    private Map<String, String> prepareSelectionBackups() throws Exception {
+        Map<String, String> backups = new HashMap<>();
+
+        for (String tableName : tableInfoService.getTables()) {
+            if (!selectionService.hasCustomSelection(tableName)) {
+                continue;
+            }
+
+            Set<Integer> selectedRows = selectionService.getSelectedRows(tableName);
+            if (selectedRows.isEmpty() && selectionService.getSelectionPercent(tableName) == 100) {
+                continue;
+            }
+
+            List<String> columnNames = tableInfoService.getColumnNames(tableName);
+            if (columnNames.isEmpty()) {
+                continue;
+            }
+
+            String orderedColumn = "\"" + columnNames.get(0) + "\"";
+            String backupTableName = tableName + "_mask_backup";
+
+            controllerDB.execute("ALTER TABLE " + tableName + " ADD COLUMN IF NOT EXISTS "
+                    + INDEX_COLUMN_NAME + " BIGINT;");
+
+            String indexingSql = "WITH ordered AS (" +
+                    "SELECT ctid, row_number() OVER (ORDER BY " + orderedColumn + ") - 1 AS rn " +
+                    "FROM " + tableName +
+                    ") UPDATE " + tableName + " t " +
+                    "SET " + INDEX_COLUMN_NAME + " = ordered.rn " +
+                    "FROM ordered " +
+                    "WHERE t.ctid = ordered.ctid;";
+
+            controllerDB.execute(indexingSql);
+
+            controllerDB.execute("DROP TABLE IF EXISTS " + backupTableName + ";");
+            controllerDB.execute("CREATE TEMP TABLE " + backupTableName + " AS SELECT * FROM "
+                    + tableName + " WHERE " + buildNotSelectedCondition(selectedRows) + ";");
+
+            backups.put(tableName, backupTableName);
+        }
+
+        return backups;
+    }
+
+    private void restoreUnselectedRows(Map<String, String> backups) throws Exception {
+        for (Map.Entry<String, String> entry : backups.entrySet()) {
+            String tableName = entry.getKey();
+            String backupTableName = entry.getValue();
+            Set<Integer> selectedRows = selectionService.getSelectedRows(tableName);
+
+            controllerDB.execute("DELETE FROM " + tableName + " WHERE "
+                    + buildNotSelectedCondition(selectedRows) + ";");
+
+            controllerDB.execute("INSERT INTO " + tableName + " SELECT * FROM "
+                    + backupTableName + ";");
+
+            controllerDB.execute("DROP TABLE IF EXISTS " + backupTableName + ";");
+            controllerDB.execute("ALTER TABLE " + tableName + " DROP COLUMN IF EXISTS "
+                    + INDEX_COLUMN_NAME + ";");
+        }
+    }
+
+    private String buildNotSelectedCondition(Set<Integer> selectedRows) {
+        if (selectedRows.isEmpty()) {
+            return "TRUE";
+        }
+
+        String selectedIndexes = selectedRows.stream()
+                                             .map(String::valueOf)
+                                             .collect(Collectors.joining(","));
+        return INDEX_COLUMN_NAME + " NOT IN (" + selectedIndexes + ")";
     }
 
 }
