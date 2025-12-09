@@ -49,6 +49,7 @@ public class MainScene {
     private int totalPageCount;
     private Tab currentTab;
     private String currentTableName;
+    private boolean isCurrentPageUpdateInProgress;
 
 
     private final List<MaskMethods> universalMaskMethods = new ArrayList<>();
@@ -145,6 +146,10 @@ public class MainScene {
         selectionValue.setText("100%");
 
         currentPage.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (isCurrentPageUpdateInProgress) {
+                return;
+            }
+
             if (oldValue.equals(newValue)) {
                 return;
             }
@@ -161,7 +166,7 @@ public class MainScene {
                     updateCurrentTabContent();
                 }
             } else {
-                currentPage.setText(oldValue);
+                setCurrentPageText(oldValue);
             }
 
         });
@@ -210,7 +215,7 @@ public class MainScene {
             tabPane.getTabs().add(tab);
             currentTab = null;
             currentTableName = null;
-            currentPage.setText("0");
+            setCurrentPageText("0");
             totalPages.setText("0");
             columnList.getItems().clear();
             columnPreparationList.getItems().clear();
@@ -243,7 +248,7 @@ public class MainScene {
         currentTableName = (String) tab.getUserData();
         currentTab = tab;
         updateCurrentTabContent();
-        currentPage.setText(String.valueOf(page));
+        setCurrentPageText(String.valueOf(page));
 
         totalPageCount = (int) Math.ceil(
                 (double) tableInfoService.getTableSize(currentTableName)
@@ -280,6 +285,12 @@ public class MainScene {
         dateTypeList.setDisable(!hasData);
         selectionSlider.setDisable(!hasData);
         selectionButton.setDisable(!hasData);
+    }
+
+    private void setCurrentPageText(String value) {
+        isCurrentPageUpdateInProgress = true;
+        currentPage.setText(value);
+        isCurrentPageUpdateInProgress = false;
     }
 
     //Конфирурируем листы с методами обезличивания
@@ -696,13 +707,13 @@ public class MainScene {
 
     public void PageBack() {
         if (page > 1) {
-            currentPage.setText(String.valueOf(--page));
+            setCurrentPageText(String.valueOf(--page));
         }
     }
 
     public void PageNext() {
         if (page < totalPageCount) {
-            currentPage.setText(String.valueOf(++page));
+            setCurrentPageText(String.valueOf(++page));
         }
 
     }
