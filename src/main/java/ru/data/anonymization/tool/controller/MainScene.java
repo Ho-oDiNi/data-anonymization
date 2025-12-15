@@ -1,11 +1,11 @@
 package ru.data.anonymization.tool.controller;
 
 import javafx.application.Platform;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -15,18 +15,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.data.anonymization.tool.config.AppContext;
 import ru.data.anonymization.tool.dto.DataPreparationDto;
-import ru.data.anonymization.tool.dto.enums.MaskMethods;
 import ru.data.anonymization.tool.dto.RiskDto;
 import ru.data.anonymization.tool.dto.StatisticResponseDto;
 import ru.data.anonymization.tool.dto.TableData;
+import ru.data.anonymization.tool.dto.enums.MaskMethods;
 import ru.data.anonymization.tool.service.*;
 import ru.data.anonymization.tool.util.ComponentUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -207,7 +207,6 @@ public class MainScene {
         configureDataControls(hasData);
 
 
-
         if (!hasData) {
             Tab tab = new Tab("Нет данных");
             TableView<ObservableList<String>> emptyTable = tableInfoService.buildData(null, 1);
@@ -356,6 +355,7 @@ public class MainScene {
         if (!list.isEmpty()) {
             columnList.getSelectionModel().select(0);
             columnPreparationList.getSelectionModel().select(0);
+            selectPreparationConfigColumnList();
         }
     }
 
@@ -395,7 +395,7 @@ public class MainScene {
     @FXML
     private void selectPreparationConfigColumnPreparationList() {
         String key = currentTableName + "_" + columnPreparationList.getSelectionModel()
-                                                                   .getSelectedItem();
+                .getSelectedItem();
 
         typeAttributeList.setOnAction(null);
         preparationMethodList.setOnAction(null);
@@ -458,12 +458,12 @@ public class MainScene {
     @FXML
     private void savePreparation() {
         if (currentTableName == null
-            || columnPreparationList.getSelectionModel().getSelectedItem() == null) {
+                || columnPreparationList.getSelectionModel().getSelectedItem() == null) {
             return;
         }
 
         String key = currentTableName + "_" + columnPreparationList.getSelectionModel()
-                                                                   .getSelectedItem();
+                .getSelectedItem();
 
         DataPreparationDto dto = preparationService.getPreparation(key);
         if (dto == null) {
@@ -476,17 +476,17 @@ public class MainScene {
         dto.setPreparationMethod(preparationMethodList.getSelectionModel().getSelectedItem());
 
         if (dto.getTypeAttribute().equals("Insensitive") && dto.getPreparationMethod()
-                                                               .equals("none") && dto.getDataType()
-                                                                                     .equals("String")) {
+                .equals("none") && dto.getDataType()
+                .equals("String")) {
             preparationService.removeMethod(key);
         } else {
             preparationService.addPreparation(key, dto);
         }
         System.out.println(
                 "Save1: " + currentTableName + "->" + columnPreparationList.getSelectionModel()
-                                                                           .getSelectedItem()
-                + "  [" + typeAttributeList.getSelectionModel().getSelectedItem() + ","
-                + preparationMethodList.getSelectionModel().getSelectedItem() + "]");
+                        .getSelectedItem()
+                        + "  [" + typeAttributeList.getSelectionModel().getSelectedItem() + ","
+                        + preparationMethodList.getSelectionModel().getSelectedItem() + "]");
     }
 
     private void savePreparationDataType(String dataType) {
@@ -512,10 +512,10 @@ public class MainScene {
                 preparationService.addPreparation(key, dto);
             }
             System.out.println("Save2: " + currentTableName + "->" + columnList.getSelectionModel()
-                                                                               .getSelectedItem()
-                               + "  [" + typeAttributeList.getSelectionModel().getSelectedItem()
-                               + "," + preparationMethodList.getSelectionModel().getSelectedItem()
-                               + "]");
+                    .getSelectedItem()
+                    + "  [" + typeAttributeList.getSelectionModel().getSelectedItem()
+                    + "," + preparationMethodList.getSelectionModel().getSelectedItem()
+                    + "]");
         }
     }
 
@@ -663,7 +663,7 @@ public class MainScene {
     private void setMaskingMethods() {
         universalMasking.getChildren().clear();
         universalMaskMethods.forEach(method -> universalMasking.getChildren()
-                                                               .add(createMethodButton(method)));
+                .add(createMethodButton(method)));
     }
 
     private void loadCsvDataFromFile() {
@@ -832,9 +832,9 @@ public class MainScene {
 
                     for (RiskDto risk : dto.getRisk()) {
                         statistic.append(risk.getName())
-                                 .append(": ")
-                                 .append(risk.getResult())
-                                 .append("\n");
+                                .append(": ")
+                                .append(risk.getResult())
+                                .append("\n");
                     }
 
                     statisticTitle.setText("Статистика по обезличиванию");
