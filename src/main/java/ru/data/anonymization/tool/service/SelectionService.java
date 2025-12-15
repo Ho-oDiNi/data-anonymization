@@ -53,6 +53,10 @@ public class SelectionService {
         return selectedPercentByTable.getOrDefault(tableName, 100);
     }
 
+    public Set<Integer> getSelectedRows(String tableName) {
+        return selectedRowsByTable.getOrDefault(tableName, Collections.emptySet());
+    }
+
     public void clearAll() {
         selectedRowsByTable.clear();
         selectedPercentByTable.clear();
