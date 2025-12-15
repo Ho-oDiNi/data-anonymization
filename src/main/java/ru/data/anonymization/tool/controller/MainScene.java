@@ -368,14 +368,27 @@ public class MainScene {
         DataPreparationDto dto = preparationService.getPreparation(key);
         if (dto != null) {
             System.out.println("Отображение из памяти DataType");
-            switch (dto.getDataType()) {
-                case "String" -> dateTypeList.getSelectionModel().select(0);
-                case "Integer" -> dateTypeList.getSelectionModel().select(1);
-                case "Float" -> dateTypeList.getSelectionModel().select(2);
-                case "Date" -> dateTypeList.getSelectionModel().select(3);
-            }
+            selectDataTypeInList(dto.getDataType());
         } else {
+            String detectedType = tableInfoService.detectAttributeType(
+                    currentTableName,
+                    columnList.getSelectionModel().getSelectedItem()
+            );
+            selectDataTypeInList(detectedType);
+        }
+    }
+
+    private void selectDataTypeInList(String dataType) {
+        if (dataType == null) {
             dateTypeList.getSelectionModel().select(0);
+            return;
+        }
+
+        switch (dataType) {
+            case "Date" -> dateTypeList.getSelectionModel().select(3);
+            case "Float" -> dateTypeList.getSelectionModel().select(2);
+            case "Integer" -> dateTypeList.getSelectionModel().select(1);
+            default -> dateTypeList.getSelectionModel().select(0);
         }
     }
 

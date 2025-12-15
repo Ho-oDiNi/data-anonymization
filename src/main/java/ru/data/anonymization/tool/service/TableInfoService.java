@@ -16,6 +16,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -307,6 +310,137 @@ public class TableInfoService {
             return "Error";
         }
 
+    }
+
+    public String detectAttributeType(String tableName, String columnName) {
+        if (tableName == null || columnName == null) {
+            return "String";
+        }
+
+        return switch (dataSourceType) {
+            case CSV -> detectCsvAttributeType(tableName, columnName);
+            case DATABASE -> detectDatabaseAttributeType(tableName, columnName);
+            default -> "String";
+        };
+    }
+
+    private String detectDatabaseAttributeType(String tableName, String columnName) {
+        if (!connection.isConnected()) {
+            return "String";
+        }
+
+        String query = "SELECT " + quoteIdentifier(columnName)
+                       + " FROM " + quoteIdentifier(tableName)
+                       + " WHERE " + quoteIdentifier(columnName) + " IS NOT NULL LIMIT 100";
+
+        try (ResultSet resultSet = connection.executeQuery(query)) {
+            List<String> values = new ArrayList<>();
+            while (resultSet.next()) {
+                Object value = resultSet.getObject(1);
+                if (value != null) {
+                    values.add(value.toString());
+                }
+            }
+            return detectTypeByPriority(values);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "String";
+        }
+    }
+
+    private String detectCsvAttributeType(String tableName, String columnName) {
+        TableData tableData = csvTables.get(tableName);
+        if (tableData == null) {
+            return "String";
+        }
+
+        int columnIndex = tableData.getColumnNames().indexOf(columnName);
+        if (columnIndex < 0) {
+            return "String";
+        }
+
+        List<String> values = new ArrayList<>();
+        for (List<String> row : tableData.getRows()) {
+            if (columnIndex < row.size()) {
+                String value = row.get(columnIndex);
+                if (value != null) {
+                    values.add(value);
+                }
+            }
+        }
+        return detectTypeByPriority(values);
+    }
+
+    private String detectTypeByPriority(List<String> values) {
+        boolean hasData = false;
+        boolean allDate = true;
+        boolean allInteger = true;
+        boolean allFloat = true;
+
+        for (String rawValue : values) {
+            if (rawValue == null) {
+                continue;
+            }
+
+            String value = rawValue.trim();
+            if (value.isEmpty() || value.equalsIgnoreCase("null")) {
+                continue;
+            }
+
+            hasData = true;
+
+            if (!isDateValue(value)) {
+                allDate = false;
+            }
+            if (!isIntegerValue(value)) {
+                allInteger = false;
+            }
+            if (!isFloatValue(value)) {
+                allFloat = false;
+            }
+        }
+
+        if (!hasData) {
+            return "String";
+        }
+
+        if (allDate) {
+            return "Date";
+        }
+        if (allInteger) {
+            return "Integer";
+        }
+        if (allFloat) {
+            return "Float";
+        }
+        return "String";
+    }
+
+    private boolean isDateValue(String value) {
+        List<DateTimeFormatter> dateFormats = List.of(
+                DateTimeFormatter.ISO_LOCAL_DATE,
+                DateTimeFormatter.ofPattern("dd.MM.yyyy"),
+                DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+                DateTimeFormatter.ofPattern("yyyy/MM/dd")
+        );
+
+        for (DateTimeFormatter formatter : dateFormats) {
+            try {
+                LocalDate.parse(value, formatter);
+                return true;
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+        return false;
+    }
+
+    private boolean isIntegerValue(String value) {
+        return value.matches("^-?\\d+$");
+    }
+
+    private boolean isFloatValue(String value) {
+        String normalizedValue = value.replace(',', '.');
+        return normalizedValue.matches("^-?\\d+(\\.\\d+)?$");
     }
 
     private void fillTableFromCsv(String nameTable, TableView<ObservableList<String>> tableview,
