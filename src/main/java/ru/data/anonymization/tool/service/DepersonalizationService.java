@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -148,6 +150,7 @@ public class DepersonalizationService {
         statisticService.setNotMaskStatistic(assessmentConfigMap);
 
         dataPreparationService.start();
+        applySelectionFilter();
 
         long start = System.currentTimeMillis();
 
@@ -162,6 +165,44 @@ public class DepersonalizationService {
 
         NumberFormat formatter = new DecimalFormat("#0.00");
         return formatter.format((end - start) / 1000d).replace(",", ".");
+    }
+
+    private void applySelectionFilter() throws Exception {
+        for (String tableName : tableInfoService.getTables()) {
+            if (!selectionService.hasCustomSelection(tableName)) {
+                continue;
+            }
+
+            Set<Integer> selectedRows = selectionService.getSelectedRows(tableName);
+            if (selectedRows.isEmpty()) {
+                controllerDB.execute("DELETE FROM " + tableName + ";");
+                continue;
+            }
+
+            List<String> columnNames = tableInfoService.getColumnNames(tableName);
+            if (columnNames.isEmpty()) {
+                continue;
+            }
+
+            String orderColumn = columnNames.get(0);
+            String selectedRowNumbers = selectedRows.stream()
+                                                    .map(index -> index + 1)
+                                                    .sorted()
+                                                    .map(String::valueOf)
+                                                    .collect(Collectors.joining(", "));
+
+            String filterSql = """
+                    WITH ordered AS (
+                        SELECT ctid, ROW_NUMBER() OVER (ORDER BY %s) AS rn
+                        FROM %s
+                    )
+                    DELETE FROM %s
+                    USING ordered
+                    WHERE %s.ctid = ordered.ctid AND ordered.rn NOT IN (%s);
+                    """.formatted(orderColumn, tableName, tableName, tableName, selectedRowNumbers);
+
+            controllerDB.execute(filterSql);
+        }
     }
 
     private String maskingCsv() throws IOException {
