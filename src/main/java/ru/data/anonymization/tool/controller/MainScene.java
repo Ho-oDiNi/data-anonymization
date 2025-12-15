@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Component
 @RequiredArgsConstructor
@@ -687,14 +688,30 @@ public class MainScene {
         }
 
         String delimiter = lines.get(0).contains(";") ? ";" : ",";
-        List<String> headers = Arrays.stream(lines.get(0).split(delimiter, -1))
+        List<String> rawHeaders = Arrays.stream(lines.get(0).split(delimiter, -1))
                 .map(String::trim)
                 .collect(Collectors.toList());
+
+        List<Integer> headerIndexes = IntStream.range(0, rawHeaders.size())
+                .filter(index -> !rawHeaders.get(index).isBlank())
+                .boxed()
+                .collect(Collectors.toList());
+
+        List<String> headers = headerIndexes.stream()
+                .map(rawHeaders::get)
+                .collect(Collectors.toList());
+
+        if (headers.isEmpty()) {
+            throw new IOException("Файл не содержит валидных заголовков столбцов");
+        }
 
         List<List<String>> rows = lines.stream()
                 .skip(1)
                 .map(line -> Arrays.stream(line.split(delimiter, -1))
                         .map(String::trim)
+                        .collect(Collectors.toList()))
+                .map(row -> headerIndexes.stream()
+                        .map(index -> index < row.size() ? row.get(index) : "")
                         .collect(Collectors.toList()))
                 .collect(Collectors.toList());
 
