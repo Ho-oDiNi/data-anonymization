@@ -42,6 +42,7 @@ public class MainScene {
     private final ViewService viewService;
     private final SelectionService selectionService;
     private final DatabaseConnectionService databaseConnectionService;
+    private final SyntheticMethodService syntheticMethodService;
 
     private final SaveView saveView;
     private final DownloadView downloadView;
@@ -870,6 +871,42 @@ public class MainScene {
         refreshTables();
         statisticTitle.setText(null);
         statisticBody.setText(null);
+    }
+
+    @FXML
+    private void runSyntheticMethod(javafx.event.ActionEvent event) {
+        if (currentTableName == null) {
+            showError("Нет активной таблицы для синтетических методов");
+            return;
+        }
+        if (!(event.getSource() instanceof Button button)) {
+            showError("Не удалось определить выбранный метод синтеза");
+            return;
+        }
+
+        String methodName = button.getText();
+        Runnable task = () -> {
+            try {
+                String responseMessage = syntheticMethodService.sendTableData(
+                        currentTableName,
+                        methodName
+                );
+                Platform.runLater(() -> showInfo("Ответ скрипта: " + responseMessage));
+            } catch (Exception e) {
+                Platform.runLater(() -> showError(
+                        "Ошибка при обращении к скрипту: " + e.getMessage()
+                ));
+            }
+        };
+        new Thread(task).start();
+    }
+
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Информация");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
 }

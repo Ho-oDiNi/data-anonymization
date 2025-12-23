@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,6 +111,29 @@ public class TableInfoService {
             e.printStackTrace();
         }
         return list;
+    }
+
+    public TableData getTableData(String tableName) {
+        if (tableName == null) {
+            return null;
+        }
+        if (dataSourceType == DataSourceType.CSV) {
+            return csvTables.get(tableName);
+        }
+        if (dataSourceType == DataSourceType.NONE || !connection.isConnected()) {
+            return null;
+        }
+
+        List<String> columns = getColumnNames(tableName);
+        if (columns.isEmpty()) {
+            return new TableData(tableName, List.of(), List.of());
+        }
+
+        List<String[]> rawRows = getTableLikeList(tableName, columns);
+        List<List<String>> rows = rawRows.stream()
+                .map(Arrays::asList)
+                .collect(Collectors.toList());
+        return new TableData(tableName, columns, rows);
     }
 
     public TableView<ObservableList<String>> buildData(String nameTable, int page) {
