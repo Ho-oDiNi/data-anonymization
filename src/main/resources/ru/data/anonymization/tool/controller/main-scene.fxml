@@ -192,11 +192,11 @@
                         <VBox spacing="5" style="-fx-padding: 5px;">
                             <Label text="Синтетические методы" styleClass="labelTitle"/>
                             <VBox spacing="5" alignment="TOP_CENTER">
-                                <Button text="Bayesian Network" prefWidth="200"/>
-                                <Button text="GAN" prefWidth="200"/>
-                                <Button text="VAE" prefWidth="200"/>
-                                <Button text="Copula" prefWidth="200"/>
-                                <Button text="LLM" prefWidth="200"/>
+                                <Button text="Bayesian Network" prefWidth="200" onAction="#runSyntheticMethod"/>
+                                <Button text="GAN" prefWidth="200" onAction="#runSyntheticMethod"/>
+                                <Button text="VAE" prefWidth="200" onAction="#runSyntheticMethod"/>
+                                <Button text="Copula" prefWidth="200" onAction="#runSyntheticMethod"/>
+                                <Button text="LLM" prefWidth="200" onAction="#runSyntheticMethod"/>
                             </VBox>
                             <Region VBox.vgrow="ALWAYS"/>
                         </VBox>
