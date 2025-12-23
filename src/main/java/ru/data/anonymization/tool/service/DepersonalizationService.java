@@ -150,12 +150,16 @@ public class DepersonalizationService {
         statisticService.setNotMaskStatistic(assessmentConfigMap);
 
         dataPreparationService.start();
-        applySelectionFilter();
+        List<String> tablesWithSelectionPolicy = applySelectionPolicies();
 
         long start = System.currentTimeMillis();
 
-        for (MaskItem method : methods) {
-            method.start(controllerDB);
+        try {
+            for (MaskItem method : methods) {
+                method.start(controllerDB);
+            }
+        } finally {
+            resetSelectionPolicies(tablesWithSelectionPolicy);
         }
 
         long end = System.currentTimeMillis();
@@ -167,41 +171,66 @@ public class DepersonalizationService {
         return formatter.format((end - start) / 1000d).replace(",", ".");
     }
 
-    private void applySelectionFilter() throws Exception {
+    private List<String> applySelectionPolicies() throws Exception {
+        List<String> tablesWithSelectionPolicy = new ArrayList<>();
         for (String tableName : tableInfoService.getTables()) {
             if (!selectionService.hasCustomSelection(tableName)) {
                 continue;
             }
 
             Set<Integer> selectedRows = selectionService.getSelectedRows(tableName);
-            if (selectedRows.isEmpty()) {
-                controllerDB.execute("DELETE FROM " + tableName + ";");
-                continue;
-            }
-
             List<String> columnNames = tableInfoService.getColumnNames(tableName);
             if (columnNames.isEmpty()) {
                 continue;
             }
 
             String orderColumn = columnNames.get(0);
-            String selectedRowNumbers = selectedRows.stream()
-                                                    .map(index -> index + 1)
-                                                    .sorted()
-                                                    .map(String::valueOf)
-                                                    .collect(Collectors.joining(", "));
+            String selectionCondition = buildSelectionCondition(tableName, orderColumn, selectedRows);
 
-            String filterSql = """
-                    WITH ordered AS (
-                        SELECT ctid, ROW_NUMBER() OVER (ORDER BY %s) AS rn
-                        FROM %s
-                    )
-                    DELETE FROM %s
-                    USING ordered
-                    WHERE %s.ctid = ordered.ctid AND ordered.rn NOT IN (%s);
-                    """.formatted(orderColumn, tableName, tableName, tableName, selectedRowNumbers);
+            controllerDB.execute("ALTER TABLE " + tableName + " ENABLE ROW LEVEL SECURITY;");
+            controllerDB.execute("DROP POLICY IF EXISTS masking_selection_select ON " + tableName + ";");
+            controllerDB.execute("DROP POLICY IF EXISTS masking_selection_update ON " + tableName + ";");
+            controllerDB.execute("DROP POLICY IF EXISTS masking_selection_delete ON " + tableName + ";");
 
-            controllerDB.execute(filterSql);
+            controllerDB.execute("CREATE POLICY masking_selection_select ON " + tableName
+                    + " FOR SELECT USING (true);");
+            controllerDB.execute("CREATE POLICY masking_selection_update ON " + tableName
+                    + " FOR UPDATE USING (" + selectionCondition + ");");
+            controllerDB.execute("CREATE POLICY masking_selection_delete ON " + tableName
+                    + " FOR DELETE USING (" + selectionCondition + ");");
+
+            tablesWithSelectionPolicy.add(tableName);
+        }
+        return tablesWithSelectionPolicy;
+    }
+
+    private String buildSelectionCondition(String tableName, String orderColumn, Set<Integer> selectedRows) {
+        if (selectedRows.isEmpty()) {
+            return "true";
+        }
+
+        String selectedRowNumbers = selectedRows.stream()
+                .map(index -> index + 1)
+                .sorted()
+                .map(String::valueOf)
+                .collect(Collectors.joining(", "));
+
+        String filterSql = """
+                SELECT ctid FROM (
+                    SELECT ctid, ROW_NUMBER() OVER (ORDER BY %s) AS rn
+                    FROM %s
+                ) ordered WHERE rn IN (%s)
+                """.formatted(orderColumn, tableName, selectedRowNumbers);
+
+        return "ctid NOT IN (" + filterSql + ")";
+    }
+
+    private void resetSelectionPolicies(List<String> tablesWithSelectionPolicy) throws Exception {
+        for (String tableName : tablesWithSelectionPolicy) {
+            controllerDB.execute("DROP POLICY IF EXISTS masking_selection_select ON " + tableName + ";");
+            controllerDB.execute("DROP POLICY IF EXISTS masking_selection_update ON " + tableName + ";");
+            controllerDB.execute("DROP POLICY IF EXISTS masking_selection_delete ON " + tableName + ";");
+            controllerDB.execute("ALTER TABLE " + tableName + " DISABLE ROW LEVEL SECURITY;");
         }
     }
 
@@ -220,10 +249,7 @@ public class DepersonalizationService {
             List<List<String>> sourceRows = sourceTable.getRows();
 
             for (int i = 0; i < sourceRows.size(); i++) {
-                if (!selectionService.hasCustomSelection(tableName)
-                        || selectionService.isRowSelected(tableName, i)) {
-                    filteredRows.add(new ArrayList<>(sourceRows.get(i)));
-                }
+                filteredRows.add(new ArrayList<>(sourceRows.get(i)));
             }
 
             TableData maskedTable = new TableData(
