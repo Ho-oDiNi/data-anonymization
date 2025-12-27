@@ -164,7 +164,11 @@ public class SyntheticMethodService {
             }
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                throw new IllegalStateException("Скрипт завершился с кодом: " + exitCode);
+                String scriptOutput = String.join("\n", lines);
+                throw new IllegalStateException(
+                        "Скрипт завершился с кодом: " + exitCode
+                                + (scriptOutput.isBlank() ? "" : "\nВывод скрипта:\n" + scriptOutput)
+                );
             }
             return lines;
         }
