@@ -1,0 +1,14 @@
+numpy>=1.20
+pandas
+scikit-learn
+scipy
+tqdm
+
+torch>=2.1, <2.3
+tsai
+wheel>=0.40
+
+opacus<1.5.4
+
+# synthcity: ставить отдельной командой в конце
+# synthcity

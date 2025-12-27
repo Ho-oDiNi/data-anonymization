@@ -1,6 +1,7 @@
 .idea
 bags
 *.txt
+!requirements.txt
 target
 src/main/java/*TODO*
 .venv

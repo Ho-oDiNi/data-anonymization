@@ -6,6 +6,9 @@ from typing import Optional
 
 import pandas as pd
 
+# cat payload.json | python synthetic_receiver.py --n 500 --target total
+# Get-Content payload.json | python synthetic_receiver.py --n 500 --target total
+
 
 def parse_payload_to_dataframe(raw_payload: str) -> pd.DataFrame:
     cleaned_payload = raw_payload.strip()
@@ -82,18 +85,11 @@ def main() -> None:
         target_col = args[i + 1]
 
     raw_payload = sys.stdin.read()
-    print("Получены данные:")
-    print(raw_payload)
-
     df = parse_payload_to_dataframe(raw_payload)
-    print("Данные в формате Pandas:")
-    print(df)
 
     # --- Synthesis ---
     try:
         syn_df = synthesize_with_bayesian_network(df, n_rows=n_rows, target_column=target_col)
-        print("Синтетические данные (Pandas):")
-        print(syn_df)
 
         # Return synthetic data in JSON to stdout (machine-friendly)
         response = {
