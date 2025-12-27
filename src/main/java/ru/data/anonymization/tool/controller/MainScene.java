@@ -29,12 +29,20 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Component
 @RequiredArgsConstructor
 public class MainScene {
+
+    private static final Set<String> SYNTHETIC_METHODS_WITH_CONFIG = Set.of(
+            "Bayesian Network",
+            "ADSGAN",
+            "CTGAN",
+            "PATEGAN"
+    );
 
     private final TableInfoService tableInfoService;
     private final DepersonalizationService depersonalizationService;
@@ -888,7 +896,7 @@ public class MainScene {
 
         String methodName = button.getText();
 
-        if ("Bayesian Network".equalsIgnoreCase(methodName)) {
+        if (isSyntheticMethodWithConfig(methodName)) {
             try {
                 syntheticMethodView.configView(
                         methodName,
@@ -903,20 +911,12 @@ public class MainScene {
             return;
         }
 
-        Runnable task = () -> {
-            try {
-                String responseMessage = syntheticMethodService.sendTableData(
-                        currentTableName,
-                        methodName
-                );
-                Platform.runLater(() -> showInfo("Ответ скрипта: " + responseMessage));
-            } catch (Exception e) {
-                Platform.runLater(() -> showError(
-                        "Ошибка при обращении к скрипту: " + e.getMessage()
-                ));
-            }
-        };
-        new Thread(task).start();
+        showError("Неизвестный метод синтеза: " + methodName);
+    }
+
+    private boolean isSyntheticMethodWithConfig(String methodName) {
+        return SYNTHETIC_METHODS_WITH_CONFIG.stream()
+                .anyMatch(name -> name.equalsIgnoreCase(methodName));
     }
 
     private void showInfo(String message) {

@@ -44,15 +44,23 @@ public class SyntheticMethodView {
     @FXML
     private HBox buttonContainer;
 
+    private String syntheticMethodName;
     private Stage stage;
 
-    public void configView(String title, String table, ShowMode mode, String name, VBox config)
+    public void configView(
+            String methodName,
+            String table,
+            ShowMode mode,
+            String name,
+            VBox config
+    )
             throws IOException {
+        syntheticMethodName = methodName;
         FXMLLoader fxmlLoader = new FXMLLoader(SyntheticMethodView.class.getResource(
                 "synthetic-method-view.fxml"));
         stage = ComponentUtils.modalStageView(
                 fxmlLoader,
-                "Настройка метода (" + title + ")",
+                "Настройка метода (" + methodName + ")",
                 "gears.png"
         );
 
@@ -120,7 +128,7 @@ public class SyntheticMethodView {
         SyntheticConfigDto dto = new SyntheticConfigDto();
         dto.setName(trimmedName);
         dto.setTableName(table);
-        dto.setMethodName("Bayesian Network");
+        dto.setMethodName(syntheticMethodName);
         dto.setRowsCount(rowsCount.getValue());
 
         String targetValue = targetColumn.getSelectionModel().getSelectedItem();
