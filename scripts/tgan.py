@@ -2,15 +2,15 @@
 import json
 import sys
 from io import StringIO
-from typing import Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 
-# cat payload.json | python adsgan.py --n 500 --target total
-# Get-Content payload.json | python adsgan.py --n 500 --target total
+# cat payload.json | python tgan.py --n 500 --target total
+# Get-Content payload.json | python tgan.py --n 500 --target total
 
 
-def parse_payload_to_dataframe(raw_payload: str) -> Tuple[pd.DataFrame, dict]:
+def parse_payload_to_dataframe(raw_payload: str) -> tuple[pd.DataFrame, dict]:
     cleaned_payload = raw_payload.strip()
     if not cleaned_payload:
         return pd.DataFrame(), {}
@@ -30,13 +30,43 @@ def parse_payload_to_dataframe(raw_payload: str) -> Tuple[pd.DataFrame, dict]:
     return pd.read_csv(StringIO(cleaned_payload)), {}
 
 
+def _select_target_column(df: pd.DataFrame, target_column: Optional[str]) -> tuple[Optional[str], list[str]]:
+    """Проверяет целевую колонку и, при необходимости, отключает её для стабильной работы.
+
+    Возвращает фактически используемую колонку и список предупреждений.
+    Отключение выполняется, если хотя бы один класс содержит меньше трёх записей,
+    поскольку SynthCity применяет кросс-валидацию с тремя фолдами и падает при
+    недостатке объектов в классах.
+    """
+
+    if not target_column:
+        return None, []
+
+    if target_column not in df.columns:
+        raise ValueError(
+            f"target_column '{target_column}' not found in columns: {list(df.columns)}"
+        )
+
+    class_distribution = df[target_column].value_counts(dropna=False)
+    min_class_size = int(class_distribution.min()) if not class_distribution.empty else 0
+
+    if min_class_size < 3:
+        warning = (
+            "Целевая колонка отключена: обнаружен класс с количеством наблюдений меньше 3, "
+            "что несовместимо с кросс-валидацией TGAN. Синтез выполнен без учёта целевой переменной."
+        )
+        return None, [warning]
+
+    return target_column, []
+
+
 def synthesize_with_adsgan(
     df: pd.DataFrame,
     n_rows: int = 0,
     target_column: Optional[str] = None,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, list[str]]:
     """
-    Generates synthetic data using SynthCity ADSGAN plugin.
+    Генерирует синтетические данные с помощью SynthCity ADSGAN.
 
     Requirements:
       pip install "synthcity[all]" pandas scikit-learn
@@ -46,17 +76,17 @@ def synthesize_with_adsgan(
     - If target_column is provided, it will be passed to GenericDataLoader.
     """
     if df is None or df.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(), []
 
     n = n_rows if n_rows and n_rows > 0 else len(df)
 
     from synthcity.plugins import Plugins
     from synthcity.plugins.core.dataloader import GenericDataLoader
 
-    if target_column:
-        if target_column not in df.columns:
-            raise ValueError(f"target_column '{target_column}' not found in columns: {list(df.columns)}")
-        loader = GenericDataLoader(df, target_column=target_column)
+    selected_target, warnings = _select_target_column(df, target_column)
+
+    if selected_target:
+        loader = GenericDataLoader(df, target_column=selected_target)
     else:
         loader = GenericDataLoader(df)
 
@@ -64,7 +94,7 @@ def synthesize_with_adsgan(
     plugin.fit(loader)
 
     syn_loader = plugin.generate(count=n)
-    return syn_loader.dataframe()
+    return syn_loader.dataframe(), warnings
 
 
 def main() -> None:
@@ -95,7 +125,9 @@ def main() -> None:
         target_col = config.get("target") or target_col
 
     try:
-        syn_df = synthesize_with_adsgan(df, n_rows=n_rows, target_column=target_col)
+        syn_df, warnings = synthesize_with_adsgan(
+            df, n_rows=n_rows, target_column=target_col
+        )
 
         response = {
             "status": "ok",
@@ -104,6 +136,8 @@ def main() -> None:
             "rows_synth": int(len(syn_df)),
             "data_synth": syn_df.to_dict(orient="records"),
         }
+        if warnings:
+            response["warnings"] = warnings
         print(json.dumps(response, ensure_ascii=False))
 
     except Exception as e:
