@@ -11,4 +11,5 @@ import java.util.Map;
 public class SaveDto implements Serializable {
     private Map<String, DataPreparationDto> preparationMap = new HashMap<>();
     private Map<String, MaskItem> methodsMap = new HashMap<>();
+    private Map<String, SyntheticConfigDto> syntheticConfigMap = new HashMap<>();
 }

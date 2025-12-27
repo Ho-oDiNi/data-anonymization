@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/8.0.171"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="ru.data.anonymization.tool.controller.SyntheticMethodView"
+      spacing="10" style="-fx-padding: 15px;">
+    <GridPane hgap="10" vgap="10">
+        <columnConstraints>
+            <ColumnConstraints minWidth="120"/>
+            <ColumnConstraints minWidth="200"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints minHeight="30"/>
+            <RowConstraints minHeight="30"/>
+            <RowConstraints minHeight="30"/>
+            <RowConstraints minHeight="30"/>
+        </rowConstraints>
+
+        <Label text="Таблица" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="tableName" editable="false" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Название" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="syntheticName" promptText="Введите название" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Кол-во строк" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <Spinner fx:id="rowsCount" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Target (опц.)" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="targetColumn" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <HBox fx:id="buttonContainer" spacing="10" alignment="CENTER_RIGHT">
+        <padding>
+            <Insets top="10"/>
+        </padding>
+    </HBox>
+</VBox>
+
