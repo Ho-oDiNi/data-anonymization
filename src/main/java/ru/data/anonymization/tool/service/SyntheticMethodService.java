@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 public class SyntheticMethodService {
 
     private final TableInfoService tableInfoService;
-    private final Path scriptPath = Paths.get("scripts", "bayesian_network.py");
     private final Map<String, SyntheticConfigDto> syntheticConfigMap = new HashMap<>();
 
     public SyntheticMethodService(TableInfoService tableInfoService) {
@@ -75,6 +74,8 @@ public class SyntheticMethodService {
             throw new IllegalStateException("Не удалось получить данные таблицы");
         }
 
+        Path scriptPath = resolveScriptPath(methodName);
+
         JSONObject payload = new JSONObject();
         payload.put("method", methodName);
         payload.put("config", new JSONObject());
@@ -87,7 +88,7 @@ public class SyntheticMethodService {
         }
         payload.put("rows", rows);
 
-        List<String> outputLines = runScript(payload.toString(), null);
+        List<String> outputLines = runScript(payload.toString(), null, scriptPath);
         return extractMessage(outputLines);
     }
 
@@ -102,6 +103,8 @@ public class SyntheticMethodService {
                         "Не удалось получить данные таблицы: " + config.getTableName()
                 );
             }
+
+            Path scriptPath = resolveScriptPath(config.getMethodName());
 
             JSONObject payload = new JSONObject();
             payload.put("method", Optional.ofNullable(config.getMethodName()).orElse(""));
@@ -120,14 +123,14 @@ public class SyntheticMethodService {
             }
             payload.put("rows", rows);
 
-            List<String> output = runScript(payload.toString(), config);
+            List<String> output = runScript(payload.toString(), config, scriptPath);
             syntheticTables.add(extractTable(output, config));
         }
 
         return syntheticTables;
     }
 
-    private List<String> runScript(String payload, SyntheticConfigDto config)
+    private List<String> runScript(String payload, SyntheticConfigDto config, Path scriptPath)
             throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add("python");
@@ -237,5 +240,19 @@ public class SyntheticMethodService {
             columns.addAll(rowObject.keySet());
         }
         return new ArrayList<>(columns);
+    }
+
+    private Path resolveScriptPath(String methodName) {
+        if (methodName == null || methodName.isBlank()) {
+            throw new IllegalArgumentException("Не указан метод синтеза");
+        }
+
+        return switch (methodName.toLowerCase()) {
+            case "bayesian network" -> Paths.get("scripts", "bayesian_network.py");
+            case "adsgan" -> Paths.get("scripts", "adsgan.py");
+            case "ctgan" -> Paths.get("scripts", "ctgan.py");
+            case "pategan" -> Paths.get("scripts", "pategan.py");
+            default -> throw new IllegalArgumentException("Неизвестный метод синтеза: " + methodName);
+        };
     }
 }
