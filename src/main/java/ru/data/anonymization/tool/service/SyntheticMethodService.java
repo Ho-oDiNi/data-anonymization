@@ -250,6 +250,7 @@ public class SyntheticMethodService {
         return switch (methodName.toLowerCase()) {
             case "bayesian network" -> Paths.get("scripts", "bayesian_network.py");
             case "tgan" -> Paths.get("scripts", "tgan.py");
+            case "tvae" -> Paths.get("scripts", "tvae.py");
             case "ctgan" -> Paths.get("scripts", "ctgan.py");
             case "pategan" -> Paths.get("scripts", "pategan.py");
             default -> throw new IllegalArgumentException("Неизвестный метод синтеза: " + methodName);
