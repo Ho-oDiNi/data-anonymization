@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class SyntheticMethodService {
 
     private final TableInfoService tableInfoService;
-    private final Path scriptPath = Paths.get("scripts", "synthetic_receiver.py");
+    private final Path scriptPath = Paths.get("scripts", "bayesian_network.py");
     private final Map<String, SyntheticConfigDto> syntheticConfigMap = new HashMap<>();
 
     public SyntheticMethodService(TableInfoService tableInfoService) {

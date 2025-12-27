@@ -6,8 +6,8 @@ from typing import Optional, Tuple
 
 import pandas as pd
 
-# cat payload.json | python synthetic_receiver.py --n 500 --target total
-# Get-Content payload.json | python synthetic_receiver.py --n 500 --target total
+# cat payload.json | python bayesian_network.py --n 500 --target total
+# Get-Content payload.json | python bayesian_network.py --n 500 --target total
 
 
 def parse_payload_to_dataframe(raw_payload: str) -> Tuple[pd.DataFrame, dict]:

@@ -5,3 +5,4 @@ bags
 target
 src/main/java/*TODO*
 .venv
+*.bkp
