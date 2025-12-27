@@ -2,7 +2,7 @@
 import json
 import sys
 from io import StringIO
-from typing import Optional
+from typing import Optional, Tuple
 
 import pandas as pd
 
@@ -10,15 +10,24 @@ import pandas as pd
 # Get-Content payload.json | python synthetic_receiver.py --n 500 --target total
 
 
-def parse_payload_to_dataframe(raw_payload: str) -> pd.DataFrame:
+def parse_payload_to_dataframe(raw_payload: str) -> Tuple[pd.DataFrame, dict]:
     cleaned_payload = raw_payload.strip()
     if not cleaned_payload:
-        return pd.DataFrame()
+        return pd.DataFrame(), {}
+
+    try:
+        parsed = json.loads(cleaned_payload)
+        if isinstance(parsed, dict) and {"columns", "rows"}.issubset(parsed.keys()):
+            df = pd.DataFrame(parsed.get("rows", []), columns=parsed.get("columns", []))
+            config = parsed.get("config", {}) if isinstance(parsed.get("config", {}), dict) else {}
+            return df, config
+    except json.JSONDecodeError:
+        pass
 
     if cleaned_payload.startswith("{") or cleaned_payload.startswith("["):
-        return pd.read_json(StringIO(cleaned_payload))
+        return pd.read_json(StringIO(cleaned_payload)), {}
 
-    return pd.read_csv(StringIO(cleaned_payload))
+    return pd.read_csv(StringIO(cleaned_payload)), {}
 
 
 def synthesize_with_bayesian_network(
@@ -85,7 +94,11 @@ def main() -> None:
         target_col = args[i + 1]
 
     raw_payload = sys.stdin.read()
-    df = parse_payload_to_dataframe(raw_payload)
+    df, config = parse_payload_to_dataframe(raw_payload)
+
+    if config:
+        n_rows = int(config.get("n", n_rows) or 0)
+        target_col = config.get("target") or target_col
 
     # --- Synthesis ---
     try:

@@ -3,6 +3,7 @@ package ru.data.anonymization.tool.service;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
+import ru.data.anonymization.tool.dto.SyntheticConfigDto;
 import ru.data.anonymization.tool.dto.TableData;
 
 import java.io.BufferedReader;
@@ -14,16 +15,57 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class SyntheticMethodService {
 
     private final TableInfoService tableInfoService;
     private final Path scriptPath = Paths.get("scripts", "synthetic_receiver.py");
+    private final Map<String, SyntheticConfigDto> syntheticConfigMap = new HashMap<>();
 
     public SyntheticMethodService(TableInfoService tableInfoService) {
         this.tableInfoService = tableInfoService;
+    }
+
+    public void addConfig(String name, SyntheticConfigDto config) {
+        syntheticConfigMap.put(name, config);
+    }
+
+    public boolean hasConfig(String name) {
+        return syntheticConfigMap.containsKey(name);
+    }
+
+    public void removeConfig(String name) {
+        syntheticConfigMap.remove(name);
+    }
+
+    public SyntheticConfigDto getConfig(String name) {
+        return syntheticConfigMap.get(name);
+    }
+
+    public List<SyntheticConfigDto> getConfigs() {
+        return new ArrayList<>(syntheticConfigMap.values());
+    }
+
+    public Set<String> getConfigNames() {
+        return syntheticConfigMap.keySet();
+    }
+
+    public void setConfigMap(Map<String, SyntheticConfigDto> configMap) {
+        syntheticConfigMap.clear();
+        if (configMap != null) {
+            syntheticConfigMap.putAll(configMap);
+        }
+    }
+
+    public Map<String, SyntheticConfigDto> getConfigMap() {
+        return syntheticConfigMap;
     }
 
     public String sendTableData(String tableName, String methodName)
@@ -35,6 +77,7 @@ public class SyntheticMethodService {
 
         JSONObject payload = new JSONObject();
         payload.put("method", methodName);
+        payload.put("config", new JSONObject());
         payload.put("table", tableData.getName());
         payload.put("columns", tableData.getColumnNames());
 
@@ -44,15 +87,62 @@ public class SyntheticMethodService {
         }
         payload.put("rows", rows);
 
-        List<String> outputLines = runScript(payload.toString());
+        List<String> outputLines = runScript(payload.toString(), null);
         return extractMessage(outputLines);
     }
 
-    private List<String> runScript(String payload) throws IOException, InterruptedException {
-        ProcessBuilder builder = new ProcessBuilder(
-                "python",
-                scriptPath.toAbsolutePath().toString()
-        );
+    public List<TableData> generateSyntheticTables(List<SyntheticConfigDto> configs)
+            throws IOException, InterruptedException {
+        List<TableData> syntheticTables = new ArrayList<>();
+
+        for (SyntheticConfigDto config : configs) {
+            TableData sourceTable = tableInfoService.getTableData(config.getTableName());
+            if (sourceTable == null) {
+                throw new IllegalStateException(
+                        "Не удалось получить данные таблицы: " + config.getTableName()
+                );
+            }
+
+            JSONObject payload = new JSONObject();
+            payload.put("method", Optional.ofNullable(config.getMethodName()).orElse(""));
+            payload.put("table", sourceTable.getName());
+            payload.put("columns", sourceTable.getColumnNames());
+
+            JSONObject configJson = new JSONObject();
+            configJson.put("n", config.getRowsCount());
+            configJson.put("target", Optional.ofNullable(config.getTargetColumn()).orElse(""));
+            configJson.put("name", Optional.ofNullable(config.getName()).orElse(""));
+            payload.put("config", configJson);
+
+            JSONArray rows = new JSONArray();
+            for (List<String> row : sourceTable.getRows()) {
+                rows.put(new JSONArray(row));
+            }
+            payload.put("rows", rows);
+
+            List<String> output = runScript(payload.toString(), config);
+            syntheticTables.add(extractTable(output, config));
+        }
+
+        return syntheticTables;
+    }
+
+    private List<String> runScript(String payload, SyntheticConfigDto config)
+            throws IOException, InterruptedException {
+        List<String> command = new ArrayList<>();
+        command.add("python");
+        command.add(scriptPath.toAbsolutePath().toString());
+
+        if (config != null && config.getRowsCount() > 0) {
+            command.add("--n");
+            command.add(String.valueOf(config.getRowsCount()));
+        }
+        if (config != null && config.getTargetColumn() != null && !config.getTargetColumn().isBlank()) {
+            command.add("--target");
+            command.add(config.getTargetColumn());
+        }
+
+        ProcessBuilder builder = new ProcessBuilder(command);
         builder.redirectErrorStream(true);
         Process process = builder.start();
 
@@ -97,5 +187,55 @@ public class SyntheticMethodService {
             }
         }
         return "Ответ от скрипта не получен";
+    }
+
+    private TableData extractTable(List<String> outputLines, SyntheticConfigDto config) {
+        for (int i = outputLines.size() - 1; i >= 0; i--) {
+            String line = outputLines.get(i);
+            if (line == null || line.isBlank()) {
+                continue;
+            }
+
+            try {
+                JSONObject response = new JSONObject(line);
+                if (response.has("status") && response.getString("status").equalsIgnoreCase("ok")) {
+                    JSONArray dataArray = response.optJSONArray("data_synth");
+                    if (dataArray == null || dataArray.isEmpty()) {
+                        throw new IllegalStateException("Скрипт не вернул синтетические данные");
+                    }
+
+                    List<String> columns = extractColumns(dataArray);
+                    List<List<String>> rows = new ArrayList<>();
+                    for (int idx = 0; idx < dataArray.length(); idx++) {
+                        JSONObject rowObject = dataArray.getJSONObject(idx);
+                        List<String> row = columns.stream()
+                                .map(column -> rowObject.opt(column) == null
+                                        ? null
+                                        : String.valueOf(rowObject.get(column)))
+                                .collect(Collectors.toList());
+                        rows.add(row);
+                    }
+
+                    String tableName = Optional.ofNullable(config.getName())
+                            .filter(name -> !name.isBlank())
+                            .orElseGet(() -> config.getTableName() + "_synthetic");
+
+                    return new TableData(tableName, columns, rows);
+                }
+            } catch (Exception ignored) {
+                // Пробуем разобрать следующую строку
+            }
+        }
+
+        throw new IllegalStateException("Не удалось получить результат синтеза данных");
+    }
+
+    private List<String> extractColumns(JSONArray dataArray) {
+        Set<String> columns = new java.util.LinkedHashSet<>();
+        for (int i = 0; i < dataArray.length(); i++) {
+            JSONObject rowObject = dataArray.getJSONObject(i);
+            columns.addAll(rowObject.keySet());
+        }
+        return new ArrayList<>(columns);
     }
 }

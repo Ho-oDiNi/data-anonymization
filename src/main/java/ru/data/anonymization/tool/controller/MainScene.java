@@ -19,6 +19,7 @@ import ru.data.anonymization.tool.dto.RiskDto;
 import ru.data.anonymization.tool.dto.StatisticResponseDto;
 import ru.data.anonymization.tool.dto.TableData;
 import ru.data.anonymization.tool.dto.enums.MaskMethods;
+import ru.data.anonymization.tool.dto.enums.ShowMode;
 import ru.data.anonymization.tool.service.*;
 import ru.data.anonymization.tool.util.ComponentUtils;
 
@@ -43,6 +44,7 @@ public class MainScene {
     private final SelectionService selectionService;
     private final DatabaseConnectionService databaseConnectionService;
     private final SyntheticMethodService syntheticMethodService;
+    private final SyntheticMethodView syntheticMethodView;
 
     private final SaveView saveView;
     private final DownloadView downloadView;
@@ -885,6 +887,22 @@ public class MainScene {
         }
 
         String methodName = button.getText();
+
+        if ("Bayesian Network".equalsIgnoreCase(methodName)) {
+            try {
+                syntheticMethodView.configView(
+                        methodName,
+                        currentTableName,
+                        ShowMode.CREATE,
+                        null,
+                        config
+                );
+            } catch (IOException e) {
+                showError("Не удалось открыть окно конфигурации: " + e.getMessage());
+            }
+            return;
+        }
+
         Runnable task = () -> {
             try {
                 String responseMessage = syntheticMethodService.sendTableData(

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
 import ru.data.anonymization.tool.methods.options.MaskItem;
+import ru.data.anonymization.tool.dto.SyntheticConfigDto;
 import ru.data.anonymization.tool.dto.TableData;
 
 import java.io.IOException;
@@ -30,6 +31,7 @@ public class DepersonalizationService {
     private final StatisticService statisticService;
     private final TableInfoService tableInfoService;
     private final SelectionService selectionService;
+    private final SyntheticMethodService syntheticMethodService;
 
     @Getter
     @Setter
@@ -89,17 +91,26 @@ public class DepersonalizationService {
 
     public String start() {
         methods = new ArrayList<>(methodsMap.values());
+        List<SyntheticConfigDto> syntheticConfigs = syntheticMethodService.getConfigs();
 
-        if (methods.isEmpty()) {
+        if (methods.isEmpty() && syntheticConfigs.isEmpty()) {
             return null;
         }
         String time = "0";
         try {
             if (tableInfoService.isCsvSourceActive()) {
-                time = maskingCsv();
+                if (!syntheticConfigs.isEmpty()) {
+                    time = syntheticCsv(syntheticConfigs);
+                } else {
+                    time = maskingCsv();
+                }
             } else {
                 init();
-                time = masking();
+                if (!syntheticConfigs.isEmpty()) {
+                    time = maskingSynthetic(syntheticConfigs);
+                } else {
+                    time = masking();
+                }
             }
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());
@@ -163,8 +174,29 @@ public class DepersonalizationService {
         statisticService.calculateRisk(riskConfigMap);
         statisticService.setMaskStatistic(assessmentConfigMap);
 
-        NumberFormat formatter = new DecimalFormat("#0.00");
-        return formatter.format((end - start) / 1000d).replace(",", ".");
+        return formatSeconds(start, end);
+    }
+
+    private String maskingSynthetic(List<SyntheticConfigDto> syntheticConfigs)
+            throws Exception {
+        statisticService.resetStatistic();
+        statisticService.setNotMaskStatistic(assessmentConfigMap);
+
+        dataPreparationService.start();
+        applySelectionFilter();
+
+        long start = System.currentTimeMillis();
+        List<TableData> syntheticTables = syntheticMethodService.generateSyntheticTables(syntheticConfigs);
+        for (TableData syntheticTable : syntheticTables) {
+            tableInfoService.importCsvTable(syntheticTable);
+        }
+
+        long end = System.currentTimeMillis();
+
+        statisticService.calculateRisk(riskConfigMap);
+        statisticService.setMaskStatistic(assessmentConfigMap);
+
+        return formatSeconds(start, end);
     }
 
     private void applySelectionFilter() throws Exception {
@@ -241,6 +273,21 @@ public class DepersonalizationService {
         }
 
         long end = System.currentTimeMillis();
+        return formatSeconds(start, end);
+    }
+
+    private String syntheticCsv(List<SyntheticConfigDto> syntheticConfigs)
+            throws Exception {
+        long start = System.currentTimeMillis();
+        List<TableData> syntheticTables = syntheticMethodService.generateSyntheticTables(syntheticConfigs);
+        if (!syntheticTables.isEmpty()) {
+            tableInfoService.loadCsvData(syntheticTables);
+        }
+        long end = System.currentTimeMillis();
+        return formatSeconds(start, end);
+    }
+
+    private String formatSeconds(long start, long end) {
         NumberFormat formatter = new DecimalFormat("#0.00");
         return formatter.format((end - start) / 1000d).replace(",", ".");
     }

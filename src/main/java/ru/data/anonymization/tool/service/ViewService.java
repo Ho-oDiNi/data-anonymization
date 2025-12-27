@@ -10,6 +10,8 @@ import ru.data.anonymization.tool.methods.options.MaskItem;
 import ru.data.anonymization.tool.builder.DialogBuilder;
 import ru.data.anonymization.tool.config.AppContext;
 import ru.data.anonymization.tool.controller.method.*;
+import ru.data.anonymization.tool.controller.SyntheticMethodView;
+import ru.data.anonymization.tool.dto.SyntheticConfigDto;
 import ru.data.anonymization.tool.dto.enums.MaskMethods;
 import ru.data.anonymization.tool.dto.enums.ShowMode;
 import ru.data.anonymization.tool.util.ComponentUtils;
@@ -19,6 +21,7 @@ import ru.data.anonymization.tool.util.ComponentUtils;
 public class ViewService {
 
     private final DepersonalizationService depersonalizationService;
+    private final SyntheticMethodService syntheticMethodService;
 
     private final ShuffleView shuffleView;
     private final DateAgingView dateAgingView;
@@ -37,40 +40,76 @@ public class ViewService {
     private final GeneralizationValueView generalizationValueView;
     private final RoundDateView roundDateView;
     private final DeleteMethodView deleteMethodView;
+    private final SyntheticMethodView syntheticMethodView;
 
     //Создаем кнопки для редактирования методов
     public void setConfigMethods(VBox config) {
         config.getChildren().clear();
-        depersonalizationService.getConfig().forEach(name -> {
-            HBox buttonBox = new HBox();
-            buttonBox.setAlignment(Pos.CENTER);
+        depersonalizationService.getConfig().forEach(name -> config.getChildren()
+                .add(createConfigButton(config, name, false)));
 
-            buttonBox.setStyle(
-                    "-fx-padding: 10px 0px 10px 0px; -fx-background-color: #D3D3D3; -fx-border-color: #C0C0C0;");
-            buttonBox.setId(name.replace(" ", ""));
+        syntheticMethodService.getConfigNames().forEach(name -> config.getChildren()
+                .add(createConfigButton(config, name, true)));
+    }
 
-            Button button = ComponentUtils.createButton(
-                    name,
-                    null,
-                    "-fx-background-color: transparent;-fx-focus-color: transparent;-fx-faint-focus-color: transparent; -fx-font-size: 18px;"
-            );
+    private HBox createConfigButton(VBox config, String name, boolean isSynthetic) {
+        HBox buttonBox = new HBox();
+        buttonBox.setAlignment(Pos.CENTER);
+
+        buttonBox.setStyle(
+                "-fx-padding: 10px 0px 10px 0px; -fx-background-color: #D3D3D3; -fx-border-color: #C0C0C0;");
+        buttonBox.setId(name.replace(" ", ""));
+
+        Button button = ComponentUtils.createButton(
+                name,
+                null,
+                "-fx-background-color: transparent;-fx-focus-color: transparent;-fx-faint-focus-color: transparent; -fx-font-size: 18px;"
+        );
+        if (isSynthetic) {
+            button.setOnAction(event -> openSyntheticConfiguration(config, name));
+        } else {
             button.setOnAction(event -> settingsConfiguration(config, name));
+        }
 
-            Button removeButton = ComponentUtils.createButton(
-                    "X",
-                    null,
-                    "-fx-background-color: red; -fx-text-fill: white; -fx-border-radius: 20;"
-            );
-            removeButton.setOnAction(event -> {
+        Button removeButton = ComponentUtils.createButton(
+                "X",
+                null,
+                "-fx-background-color: red; -fx-text-fill: white; -fx-border-radius: 20;"
+        );
+        removeButton.setOnAction(event -> {
+            if (isSynthetic) {
+                syntheticMethodService.removeConfig(name);
+            } else {
                 depersonalizationService.removeMethod(name);
-                config.getChildren().remove(buttonBox);
-            });
-
-            buttonBox.getChildren().add(button);
-            buttonBox.getChildren().add(removeButton);
-            config.getChildren().add(buttonBox);
-
+            }
+            config.getChildren().remove(buttonBox);
         });
+
+        buttonBox.getChildren().add(button);
+        buttonBox.getChildren().add(removeButton);
+        return buttonBox;
+    }
+
+    private void openSyntheticConfiguration(VBox config, String name) {
+        if (AppContext.needRefresh) {
+            DialogBuilder.createErrorDialog("Сначало нужно обновить соединение!");
+            return;
+        }
+        SyntheticConfigDto dto = syntheticMethodService.getConfig(name);
+        if (dto == null) {
+            DialogBuilder.createErrorDialog("Конфигурация синтеза не найдена");
+            return;
+        }
+        try {
+            syntheticMethodView.configView(
+                    dto.getMethodName(),
+                    dto.getTableName(),
+                    ShowMode.EDIT,
+                    name,
+                    config
+            );
+        } catch (Exception ignore) {
+        }
     }
 
     public void maskConfiguration(
