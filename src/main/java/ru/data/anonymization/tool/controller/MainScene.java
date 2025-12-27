@@ -39,7 +39,7 @@ public class MainScene {
 
     private static final Set<String> SYNTHETIC_METHODS_WITH_CONFIG = Set.of(
             "Bayesian Network",
-            "ADSGAN",
+            "TGAN",
             "CTGAN",
             "PATEGAN"
     );
