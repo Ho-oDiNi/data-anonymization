@@ -42,7 +42,9 @@ public class MainScene {
             "TGAN",
             "TVAE",
             "CTGAN",
-            "PATEGAN"
+            "PATEGAN",
+            "DDPM",
+            "GREAT"
     );
 
     private final TableInfoService tableInfoService;

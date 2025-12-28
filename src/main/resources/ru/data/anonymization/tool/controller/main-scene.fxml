@@ -197,6 +197,8 @@
                                 <Button text="TVAE" prefWidth="200" onAction="#runSyntheticMethod"/>
                                 <Button text="CTGAN" prefWidth="200" onAction="#runSyntheticMethod"/>
                                 <Button text="PATEGAN" prefWidth="200" onAction="#runSyntheticMethod"/>
+                                <Button text="DDPM" prefWidth="200" onAction="#runSyntheticMethod"/>
+                                <Button text="GREAT" prefWidth="200" onAction="#runSyntheticMethod"/>
                             </VBox>
                             <Region VBox.vgrow="ALWAYS"/>
                         </VBox>

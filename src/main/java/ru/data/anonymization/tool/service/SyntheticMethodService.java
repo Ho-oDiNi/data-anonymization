@@ -257,6 +257,8 @@ public class SyntheticMethodService {
             case "tvae" -> Paths.get("scripts", "tvae.py");
             case "ctgan" -> Paths.get("scripts", "ctgan.py");
             case "pategan" -> Paths.get("scripts", "pategan.py");
+            case "ddpm" -> Paths.get("scripts", "ddpm.py");
+            case "great" -> Paths.get("scripts", "great.py");
             default -> throw new IllegalArgumentException("Неизвестный метод синтеза: " + methodName);
         };
     }
