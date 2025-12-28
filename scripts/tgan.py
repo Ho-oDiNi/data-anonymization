@@ -60,6 +60,9 @@ def _select_target_column(df: pd.DataFrame, target_column: Optional[str]) -> tup
     return target_column, []
 
 
+INSUFFICIENT_DATA_MESSAGE = "Недостаточно данных для выполнения синтеза"
+
+
 def synthesize_with_adsgan(
     df: pd.DataFrame,
     n_rows: int = 0,
@@ -75,8 +78,11 @@ def synthesize_with_adsgan(
     - If n_rows <= 0, generates the same number of rows as input.
     - If target_column is provided, it will be passed to GenericDataLoader.
     """
-    if df is None or df.empty:
+    if df is None:
         return pd.DataFrame(), []
+
+    if len(df) < 3:
+        return df.copy(), [INSUFFICIENT_DATA_MESSAGE]
 
     n = n_rows if n_rows and n_rows > 0 else len(df)
 
@@ -91,10 +97,14 @@ def synthesize_with_adsgan(
         loader = GenericDataLoader(df)
 
     plugin = Plugins().get("adsgan")
-    plugin.fit(loader)
 
-    syn_loader = plugin.generate(count=n)
-    return syn_loader.dataframe(), warnings
+    try:
+        plugin.fit(loader)
+        syn_loader = plugin.generate(count=n)
+        return syn_loader.dataframe(), warnings
+    except ValueError:
+        fallback_warning = INSUFFICIENT_DATA_MESSAGE
+        return df.copy(), [fallback_warning, *warnings]
 
 
 def main() -> None:
@@ -129,9 +139,13 @@ def main() -> None:
             df, n_rows=n_rows, target_column=target_col
         )
 
+        message = "Синтез выполнен успешно"
+        if INSUFFICIENT_DATA_MESSAGE in warnings:
+            message = INSUFFICIENT_DATA_MESSAGE
+
         response = {
             "status": "ok",
-            "message": "Синтез выполнен успешно",
+            "message": message,
             "rows_real": int(len(df)),
             "rows_synth": int(len(syn_df)),
             "data_synth": syn_df.to_dict(orient="records"),
